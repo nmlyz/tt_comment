@@ -1,7 +1,6 @@
 <html lang="ja">
 <head>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7GL4J23WD7"></script>
-
+    <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-7GL4J23WD7"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
@@ -12,28 +11,16 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>TikTok LIVE コメントビューアー|コメビュ</title>
 
     <meta name="description" content="TikTok LIVEのコメントビューアー">
     <meta name="keywords" content="TikTok,Live,ライブ,コメント,コメビュ,コメントビューアー,コメントビューワー">
-
     <link rel="icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css">
 
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
-        crossorigin="anonymous"
-        referrerpolicy="no-referrer">
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"
-        crossorigin="anonymous"
-        referrerpolicy="no-referrer">
-    </script>
-
-    <!-- 既存スクリプトはそのまま -->
     <script src="connection.js"></script>
     <script src="app.js"></script>
 
@@ -50,29 +37,24 @@
         }
     </script>
 
-    <script>
-        /*
-         * ============================================================
-         * 追加処理
-         * ============================================================
-         *
-         * 1. URLの ?username=xxx を入力欄へ反映
-         * 2. username が存在する場合は自動接続
-         * 3. 同じコメントが重複して表示された場合に削除
-         * 
-         * connection.js / app.js は変更しません。
-         * ============================================================
-         */
+    <!--
+        追加機能
+        ・?username=ユーザーID でユーザー名を入力可能
+        ・username が指定されている場合は自動接続
+        ・同一コメントの重複表示を除去
 
-        (function () {
+        connection.js / app.js は変更しない
+    -->
+    <script>
+        (function() {
             'use strict';
 
+            let duplicateCheckTimer = null;
+
             /*
-             * --------------------------------------------------------
-             * URLパラメーターからユーザー名を取得
-             * --------------------------------------------------------
+             * URLからusernameを取得
              */
-            function getUsernameFromQuery() {
+            function getQueryUsername() {
                 try {
                     const params = new URLSearchParams(window.location.search);
                     const username = params.get('username');
@@ -88,14 +70,11 @@
                 }
             }
 
-
             /*
-             * --------------------------------------------------------
-             * ユーザー名を入力欄へセット
-             * --------------------------------------------------------
+             * usernameを入力欄へセット
              */
             function setUsernameFromQuery() {
-                const username = getUsernameFromQuery();
+                const username = getQueryUsername();
 
                 if (!username) {
                     return false;
@@ -109,11 +88,6 @@
 
                 input.value = username;
 
-                /*
-                 * inputイベントも発生させる。
-                 * 既存JS側でinput/changeイベントを監視していても
-                 * 可能な限りそのまま動作するようにする。
-                 */
                 try {
                     input.dispatchEvent(new Event('input', {
                         bubbles: true
@@ -129,14 +103,12 @@
                 return true;
             }
 
-
             /*
-             * --------------------------------------------------------
-             * 自動接続
-             * --------------------------------------------------------
+             * usernameがURLに指定されていた場合、
+             * 既存の接続ボタンをそのままクリックする
              */
-            function autoConnect() {
-                const username = getUsernameFromQuery();
+            function autoConnectFromQuery() {
+                const username = getQueryUsername();
 
                 if (!username) {
                     return;
@@ -148,96 +120,77 @@
                     return;
                 }
 
-                /*
-                 * connection.js / app.js の読み込みや
-                 * DOM初期化が終わるまで少し待つ。
-                 */
-                setTimeout(function () {
+                setTimeout(function() {
                     try {
                         button.click();
                     } catch (e) {
                         console.error('[HTML] auto connect error:', e);
                     }
-                }, 300);
+                }, 500);
             }
 
-
             /*
-             * --------------------------------------------------------
-             * コメント重複削除
-             * --------------------------------------------------------
-             *
-             * 同じコメントが短時間に複数生成された場合、
-             * チャット欄に同一内容が3つ以上並ぶケースを除去。
-             *
-             * 既存の app.js / connection.js の処理には触れず、
-             * DOMに追加された後のコメントだけを監視する。
-             * --------------------------------------------------------
+             * コメント要素から比較用の文字列を取得
              */
-
-            const duplicateState = new WeakMap();
-
-            function getTextForDuplicateCheck(element) {
+            function getCommentText(element) {
                 if (!element) {
                     return '';
                 }
 
-                /*
-                 * コメント要素の内部テキストを取得。
-                 * 前後の空白・改行は比較時に無視。
-                 */
                 return (element.textContent || '')
                     .replace(/\s+/g, ' ')
                     .trim();
             }
 
+            /*
+             * チャット欄の重複コメントを削除
+             *
+             * 同じ内容が複数表示された場合、
+             * 最新の1件だけを残す。
+             *
+             * containerheader は対象外。
+             */
+            function removeDuplicateComments() {
+                const container = document.querySelector('.chatcontainer');
 
-            function removeDuplicateComments(container) {
                 if (!container) {
                     return;
                 }
 
-                /*
-                 * チャットコンテナ直下の要素を確認。
-                 *
-                 * h3.containerheader はコメントではないので除外。
-                 */
-                const children = Array.from(container.children);
+                const elements = Array.from(container.children);
 
-                if (children.length < 2) {
+                if (elements.length < 2) {
                     return;
                 }
 
-                const seen = new Map();
+                const seen = new Set();
 
                 /*
-                 * 最新側を残すため、後ろから確認。
+                 * 後ろから確認することで、
+                 * 同じコメントが複数ある場合は最新のものを残す。
                  */
-                for (let i = children.length - 1; i >= 0; i--) {
-                    const element = children[i];
+                for (let i = elements.length - 1; i >= 0; i--) {
+                    const element = elements[i];
 
-                    if (!element || element.tagName === 'H3') {
+                    if (!element) {
                         continue;
                     }
 
-                    const text = getTextForDuplicateCheck(element);
+                    if (element.classList.contains('containerheader')) {
+                        continue;
+                    }
+
+                    if (element.tagName === 'H3') {
+                        continue;
+                    }
+
+                    const text = getCommentText(element);
 
                     if (!text) {
                         continue;
                     }
 
-                    /*
-                     * コメントだけでなく、
-                     * ユーザー名・時刻などがDOMに含まれている場合は
-                     * 完全一致した場合のみ重複と判断。
-                     */
                     if (seen.has(text)) {
-                        const previous = seen.get(text);
-
-                        /*
-                         * 同じ内容が存在した場合、
-                         * 古い方を削除。
-                         */
                         try {
                             element.remove();
                         } catch (e) {
@@ -246,96 +199,105 @@
                             }
                         }
                     } else {
-                        seen.set(text, element);
+                        seen.add(text);
                     }
                 }
             }
 
-
             /*
-             * --------------------------------------------------------
-             * チャット欄監視
-             * --------------------------------------------------------
+             * コメント欄のDOM変更を監視
              */
             function setupDuplicateObserver() {
                 const container = document.querySelector('.chatcontainer');
 
                 if (!container) {
-                    return;
+                    return false;
                 }
 
-                /*
-                 * 初期状態にも重複があれば処理。
-                 */
-                removeDuplicateComments(container);
-
-                const observer = new MutationObserver(function (mutations) {
-                    let changed = false;
+                const observer = new MutationObserver(function(mutations) {
+                    let hasAddedNode = false;
 
                     for (const mutation of mutations) {
                         if (
                             mutation.type === 'childList' &&
-                            (
-                                mutation.addedNodes.length > 0 ||
-                                mutation.removedNodes.length > 0
-                            )
+                            mutation.addedNodes &&
+                            mutation.addedNodes.length > 0
                         ) {
-                            changed = true;
+                            hasAddedNode = true;
                             break;
                         }
                     }
 
-                    if (!changed) {
+                    if (!hasAddedNode) {
                         return;
                     }
 
                     /*
-                     * app.js側が連続してDOMを更新する可能性があるため、
-                     * 同一イベント内で何度も処理しない。
+                     * app.jsが短時間に複数回DOMを更新する場合に備えて
+                     * まとめて1回だけ重複チェックする。
                      */
-                    if (duplicateState.has(container)) {
-                        return;
+                    if (duplicateCheckTimer !== null) {
+                        clearTimeout(duplicateCheckTimer);
                     }
 
-                    duplicateState.set(container, true);
-
-                    setTimeout(function () {
-                        duplicateState.delete(container);
-                        removeDuplicateComments(container);
-                    }, 0);
+                    duplicateCheckTimer = setTimeout(function() {
+                        duplicateCheckTimer = null;
+                        removeDuplicateComments();
+                    }, 50);
                 });
 
                 observer.observe(container, {
                     childList: true,
                     subtree: false
                 });
-            }
-
-
-            /*
-             * --------------------------------------------------------
-             * 初期化
-             * --------------------------------------------------------
-             */
-            function initialize() {
-                setUsernameFromQuery();
-
-                setupDuplicateObserver();
 
                 /*
-                 * usernameパラメーターがある場合だけ自動接続。
+                 * 初期状態にも重複があれば除去
                  */
-                autoConnect();
+                removeDuplicateComments();
+
+                return true;
             }
 
-
             /*
-             * DOM構築後に実行。
+             * 初期化
              */
+            function initializeAddedFeatures() {
+                setUsernameFromQuery();
+
+                /*
+                 * チャットコンテナが存在するまで少し待つ。
+                 * 元のapp.jsの初期化を邪魔しない。
+                 */
+                let retryCount = 0;
+
+                function setup() {
+                    if (setupDuplicateObserver()) {
+                        return;
+                    }
+
+                    retryCount++;
+
+                    if (retryCount < 50) {
+                        setTimeout(setup, 100);
+                    }
+                }
+
+                setup();
+
+                /*
+                 * usernameクエリがある場合のみ自動接続
+                 */
+                autoConnectFromQuery();
+            }
+
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initialize);
+                document.addEventListener(
+                    'DOMContentLoaded',
+                    initializeAddedFeatures
+                );
             } else {
-                initialize();
+                initializeAddedFeatures();
             }
 
         })();
@@ -343,57 +305,32 @@
 </head>
 
 <body>
-
     <header class="head">
-        <img
-            src="./logo.png"
-            alt="TikTok LIVE コメントビューアー"
-            height="32">
+        <img src="./logo.png" alt="TikTok LIVE コメントビューアー" height="32">
     </header>
 
-
     <div class="inputFields">
-        <input
-            type="text"
-            id="uniqueIdInput"
-            placeholder="ユーザーIDかURL を入力...">
-
-        <button id="connectButton">
-            接続
-        </button>
+        <input type="text" id="uniqueIdInput" placeholder="ユーザーIDかURL を入力...">
+        <button id="connectButton">接続</button>
     </div>
-
 
     <div class="statusBar">
         <pre id="stateText"></pre>
         <div id="roomStats"></div>
     </div>
 
-
     <div class="mainContent">
-
         <div class="chatcontainer">
-            <h3 class="containerheader">
-                チャット
-            </h3>
+            <h3 class="containerheader">チャット</h3>
         </div>
 
         <div class="giftcontainer">
-            <h3 class="containerheader">
-                ギフト
-            </h3>
+            <h3 class="containerheader">ギフト</h3>
         </div>
-
     </div>
 
-
     <footer class="siteFooter">
-        <a
-            href="https://www.tiktok.com/@sacrifice_nico"
-            target="_blank">
-            @sacrifice_nico
-        </a>
+        <a href="https://www.tiktok.com/@sacrifice_nico" target="_blank">@sacrifice_nico</a>
     </footer>
-
 </body>
 </html>
