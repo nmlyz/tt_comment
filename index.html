@@ -5,16 +5,11 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>TikTok LIVE コメントビューアー|コメビュ</title>
+    <title>TikTok LIVE コメントビューアー</title>
 
     <meta
         name="description"
         content="TikTok LIVEのコメントビューアー"
-    >
-
-    <meta
-        name="keywords"
-        content="TikTok,Live,ライブ,コメント,コメビュ,コメントビューアー"
     >
 
     <link rel="icon" href="favicon.ico">
@@ -23,14 +18,14 @@
     <script
         src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
         crossorigin="anonymous"
-        referrerpolicy="no-referrer">
-    </script>
+        referrerpolicy="no-referrer"
+    ></script>
 
     <script
         src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"
         crossorigin="anonymous"
-        referrerpolicy="no-referrer">
-    </script>
+        referrerpolicy="no-referrer"
+    ></script>
 
     <script src="connection.js"></script>
     <script src="app.js"></script>
@@ -39,7 +34,6 @@
 <body>
 
     <header class="head">
-
         <div class="headerTitle">
             TikTok LIVE コメントビューアー
         </div>
@@ -48,98 +42,90 @@
             id="viewerMenuButton"
             class="viewerMenuButton"
             type="button"
-            aria-label="視聴者一覧">
+        >
             ☰
         </button>
-
     </header>
 
     <div class="inputFields">
 
-        <input
-            type="text"
-            id="uniqueIdInput"
-            placeholder="ユーザーID または URL"
-            autocomplete="off"
-            autocapitalize="off"
-            spellcheck="false"
-        >
+        <div class="inputTopRow">
+            <input
+                type="text"
+                id="uniqueIdInput"
+                placeholder="ユーザーIDかURL を入力..."
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck="false"
+            >
+
+            <button
+                id="copyQueryButton"
+                type="button"
+            >
+                URLコピー
+            </button>
+        </div>
 
         <button
             id="connectButton"
-            type="button">
+            type="button"
+        >
             接続
-        </button>
-
-        <button
-            id="copyQueryButton"
-            type="button">
-            URLコピー
         </button>
 
     </div>
 
     <div class="statusBar">
-
         <pre id="stateText"></pre>
-
         <div id="roomStats"></div>
-
     </div>
 
     <div class="mainContent">
 
         <div class="chatcontainer">
-
             <h3 class="containerheader">
                 チャット
             </h3>
-
         </div>
 
         <div class="giftcontainer">
-
             <h3 class="containerheader">
                 ギフト
             </h3>
-
         </div>
 
     </div>
 
-
-    <!-- 視聴者一覧背景 -->
     <div
         id="viewerMenuOverlay"
-        class="viewerMenuOverlay">
-    </div>
+        class="viewerMenuOverlay"
+    ></div>
 
-
-    <!-- 視聴者一覧 -->
     <aside
         id="viewerMenu"
-        class="viewerMenu">
-
+        class="viewerMenu"
+    >
         <div class="viewerMenuHeader">
 
             <div>
-
                 <div class="viewerMenuTitle">
-                    視聴者一覧
+                    視聴者
                 </div>
 
                 <div
                     id="viewerMenuCount"
-                    class="viewerMenuCount">
+                    class="viewerMenuCount"
+                >
                     0人
                 </div>
-
             </div>
 
             <button
                 id="viewerMenuClose"
                 class="viewerMenuClose"
-                type="button">
+                type="button"
+            >
                 ×
             </button>
 
@@ -147,9 +133,8 @@
 
         <div
             id="viewerList"
-            class="viewerList">
-        </div>
-
+            class="viewerList"
+        ></div>
     </aside>
 
 </body>
