@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
+    <title>音声テスト</title>
+
+    <style>
+        body {
+            background: #222;
+            color: white;
+            font-family: sans-serif;
+            text-align: center;
+            padding: 30px 15px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 15px auto;
+            padding: 18px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+        }
+
+        #status {
+            margin-top: 25px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>🔊 音声テスト</h2>
+
+    <button id="tegamiButton">
+        tegami.mp3
+    </button>
+
+    <button id="sakibareButton">
+        sakibare.mp3
+    </button>
+
+    <button id="bothButton">
+        両方テスト
+    </button>
+
+    <div id="status">
+        ボタンを押してください
+    </div>
+
+    <script>
+
+        const tegami =
+            new Audio('./tegami.mp3');
+
+        const sakibare =
+            new Audio('./sakibare.mp3');
+
+
+        function playAudio(
+            audio,
+            name
+        ) {
+
+            audio.pause();
+
+            audio.currentTime = 0;
+
+            audio.volume = 1.0;
+
+            const promise =
+                audio.play();
+
+            if (promise) {
+
+                promise
+                    .then(function () {
+
+                        document.getElementById(
+                            'status'
+                        ).textContent =
+                            name +
+                            ' 再生開始';
+
+                    })
+                    .catch(function (error) {
+
+                        document.getElementById(
+                            'status'
+                        ).textContent =
+                            name +
+                            ' 再生失敗\n\n' +
+                            error;
+
+                        console.error(
+                            error
+                        );
+                    });
+
+            }
+        }
+
+
+        document.getElementById(
+            'tegamiButton'
+        ).addEventListener(
+            'click',
+            function () {
+
+                playAudio(
+                    tegami,
+                    'tegami.mp3'
+                );
+            }
+        );
+
+
+        document.getElementById(
+            'sakibareButton'
+        ).addEventListener(
+            'click',
+            function () {
+
+                playAudio(
+                    sakibare,
+                    'sakibare.mp3'
+                );
+            }
+        );
+
+
+        document.getElementById(
+            'bothButton'
+        ).addEventListener(
+            'click',
+            function () {
+
+                playAudio(
+                    tegami,
+                    'tegami.mp3'
+                );
+
+                setTimeout(
+                    function () {
+
+                        playAudio(
+                            sakibare,
+                            'sakibare.mp3'
+                        );
+
+                    },
+                    500
+                );
+            }
+        );
+
+    </script>
+
+</body>
+</html>
