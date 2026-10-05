@@ -1,6 +1,7 @@
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-    <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-7GL4J23WD7"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7GL4J23WD7"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
@@ -11,296 +12,42 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>TikTok LIVE コメントビューアー|コメビュ</title>
 
     <meta name="description" content="TikTok LIVEのコメントビューアー">
     <meta name="keywords" content="TikTok,Live,ライブ,コメント,コメビュ,コメントビューアー,コメントビューワー">
+
     <link rel="icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
 
     <script src="connection.js"></script>
     <script src="app.js"></script>
 
     <script>
+        window.settings = Object.fromEntries(new URLSearchParams(location.search));
+    </script>
+
+    <script>
         function generateOverlay() {
             let username = $('#uniqueIdInput').val();
-            let url = `/obs.html?username=${username}&showLikes=1&showChats=1&showGifts=1&showFollows=1&showJoins=1&bgColor=rgb(24,23,28)&fontColor=rgb(227,229,235)&fontSize=1.3em`;
 
-            if(username) {
+            let url = `obs.html?username=${encodeURIComponent(username)}&showLikes=1&showChats=1&showGifts=1&showFollows=1&showJoins=1&bgColor=rgb(24,23,28)&fontColor=rgb(227,229,235)&fontSize=1.3em`;
+
+            if (username) {
                 window.open(url, '_blank');
             } else {
                 alert("ユーザーIDを入力してください。");
             }
         }
-    </script>
-
-    <!--
-        追加機能
-        ・?username=ユーザーID でユーザー名を入力可能
-        ・username が指定されている場合は自動接続
-        ・同一コメントの重複表示を除去
-
-        connection.js / app.js は変更しない
-    -->
-    <script>
-        (function() {
-            'use strict';
-
-            let duplicateCheckTimer = null;
-
-            /*
-             * URLからusernameを取得
-             */
-            function getQueryUsername() {
-                try {
-                    const params = new URLSearchParams(window.location.search);
-                    const username = params.get('username');
-
-                    if (!username) {
-                        return '';
-                    }
-
-                    return username.trim();
-                } catch (e) {
-                    console.error('[HTML] username query error:', e);
-                    return '';
-                }
-            }
-
-            /*
-             * usernameを入力欄へセット
-             */
-            function setUsernameFromQuery() {
-                const username = getQueryUsername();
-
-                if (!username) {
-                    return false;
-                }
-
-                const input = document.getElementById('uniqueIdInput');
-
-                if (!input) {
-                    return false;
-                }
-
-                input.value = username;
-
-                try {
-                    input.dispatchEvent(new Event('input', {
-                        bubbles: true
-                    }));
-
-                    input.dispatchEvent(new Event('change', {
-                        bubbles: true
-                    }));
-                } catch (e) {
-                    console.error('[HTML] input event error:', e);
-                }
-
-                return true;
-            }
-
-            /*
-             * usernameがURLに指定されていた場合、
-             * 既存の接続ボタンをそのままクリックする
-             */
-            function autoConnectFromQuery() {
-                const username = getQueryUsername();
-
-                if (!username) {
-                    return;
-                }
-
-                const button = document.getElementById('connectButton');
-
-                if (!button) {
-                    return;
-                }
-
-                setTimeout(function() {
-                    try {
-                        button.click();
-                    } catch (e) {
-                        console.error('[HTML] auto connect error:', e);
-                    }
-                }, 500);
-            }
-
-            /*
-             * コメント要素から比較用の文字列を取得
-             */
-            function getCommentText(element) {
-                if (!element) {
-                    return '';
-                }
-
-                return (element.textContent || '')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-            }
-
-            /*
-             * チャット欄の重複コメントを削除
-             *
-             * 同じ内容が複数表示された場合、
-             * 最新の1件だけを残す。
-             *
-             * containerheader は対象外。
-             */
-            function removeDuplicateComments() {
-                const container = document.querySelector('.chatcontainer');
-
-                if (!container) {
-                    return;
-                }
-
-                const elements = Array.from(container.children);
-
-                if (elements.length < 2) {
-                    return;
-                }
-
-                const seen = new Set();
-
-                /*
-                 * 後ろから確認することで、
-                 * 同じコメントが複数ある場合は最新のものを残す。
-                 */
-                for (let i = elements.length - 1; i >= 0; i--) {
-                    const element = elements[i];
-
-                    if (!element) {
-                        continue;
-                    }
-
-                    if (element.classList.contains('containerheader')) {
-                        continue;
-                    }
-
-                    if (element.tagName === 'H3') {
-                        continue;
-                    }
-
-                    const text = getCommentText(element);
-
-                    if (!text) {
-                        continue;
-                    }
-
-                    if (seen.has(text)) {
-                        try {
-                            element.remove();
-                        } catch (e) {
-                            if (element.parentNode) {
-                                element.parentNode.removeChild(element);
-                            }
-                        }
-                    } else {
-                        seen.add(text);
-                    }
-                }
-            }
-
-            /*
-             * コメント欄のDOM変更を監視
-             */
-            function setupDuplicateObserver() {
-                const container = document.querySelector('.chatcontainer');
-
-                if (!container) {
-                    return false;
-                }
-
-                const observer = new MutationObserver(function(mutations) {
-                    let hasAddedNode = false;
-
-                    for (const mutation of mutations) {
-                        if (
-                            mutation.type === 'childList' &&
-                            mutation.addedNodes &&
-                            mutation.addedNodes.length > 0
-                        ) {
-                            hasAddedNode = true;
-                            break;
-                        }
-                    }
-
-                    if (!hasAddedNode) {
-                        return;
-                    }
-
-                    /*
-                     * app.jsが短時間に複数回DOMを更新する場合に備えて
-                     * まとめて1回だけ重複チェックする。
-                     */
-                    if (duplicateCheckTimer !== null) {
-                        clearTimeout(duplicateCheckTimer);
-                    }
-
-                    duplicateCheckTimer = setTimeout(function() {
-                        duplicateCheckTimer = null;
-                        removeDuplicateComments();
-                    }, 50);
-                });
-
-                observer.observe(container, {
-                    childList: true,
-                    subtree: false
-                });
-
-                /*
-                 * 初期状態にも重複があれば除去
-                 */
-                removeDuplicateComments();
-
-                return true;
-            }
-
-            /*
-             * 初期化
-             */
-            function initializeAddedFeatures() {
-                setUsernameFromQuery();
-
-                /*
-                 * チャットコンテナが存在するまで少し待つ。
-                 * 元のapp.jsの初期化を邪魔しない。
-                 */
-                let retryCount = 0;
-
-                function setup() {
-                    if (setupDuplicateObserver()) {
-                        return;
-                    }
-
-                    retryCount++;
-
-                    if (retryCount < 50) {
-                        setTimeout(setup, 100);
-                    }
-                }
-
-                setup();
-
-                /*
-                 * usernameクエリがある場合のみ自動接続
-                 */
-                autoConnectFromQuery();
-            }
-
-            if (document.readyState === 'loading') {
-                document.addEventListener(
-                    'DOMContentLoaded',
-                    initializeAddedFeatures
-                );
-            } else {
-                initializeAddedFeatures();
-            }
-
-        })();
     </script>
 </head>
 
@@ -332,5 +79,15 @@
     <footer class="siteFooter">
         <a href="https://www.tiktok.com/@sacrifice_nico" target="_blank">@sacrifice_nico</a>
     </footer>
+
+    <script>
+        $(document).ready(function () {
+            let username = new URLSearchParams(location.search).get('username');
+
+            if (username) {
+                $('#uniqueIdInput').val(username);
+            }
+        });
+    </script>
 </body>
 </html>
