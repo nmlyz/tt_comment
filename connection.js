@@ -4,7 +4,12 @@
  */
 class TikTokIOConnection {
   constructor(backendUrl) {
-    this.socket = io(backendUrl);
+    
+    // GitHub Pagesから元のSocket.IOサーバーへ接続
+    this.socket = io("https://sacrifice-nico.com", {
+      transports: ["websocket", "polling"]
+    });
+    
     this.uniqueId = null;
     this.options = null;
     
@@ -19,6 +24,10 @@ class TikTokIOConnection {
     
     this.socket.on('disconnect', () => {
       console.warn("Socket disconnected!");
+    });
+    
+    this.socket.on('connect_error', (error) => {
+      console.error("Socket.IO connection error:", error);
     });
     
     this.socket.on('streamEnd', () => {
@@ -42,6 +51,7 @@ class TikTokIOConnection {
     this.setUniqueId();
     
     return new Promise((resolve, reject) => {
+      
       this.socket.once('tiktokConnected', resolve);
       this.socket.once('tiktokDisconnected', reject);
       
