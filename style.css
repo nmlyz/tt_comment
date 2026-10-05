@@ -14,10 +14,6 @@
 
     --chatBg: #202025;
     --giftBg: #29272f;
-
-    --danger: #ff5f6d;
-
-    --headerHeight: 58px;
 }
 
 * {
@@ -28,6 +24,7 @@ html,
 body {
     margin: 0;
     padding: 0;
+
     width: 100%;
     min-height: 100%;
 }
@@ -58,21 +55,29 @@ button {
     cursor: pointer;
 }
 
+
+/* =========================================================
+   ヘッダー
+   ========================================================= */
+
 .head {
     position: sticky;
     top: 0;
+
     z-index: 100;
 
     width: 100%;
-    height: var(--headerHeight);
+    height: 58px;
 
     display: flex;
+
     align-items: center;
     justify-content: space-between;
 
     padding: 0 14px;
 
     background: rgba(24, 23, 28, 0.96);
+
     border-bottom: 1px solid var(--border);
 
     backdrop-filter: blur(12px);
@@ -82,6 +87,7 @@ button {
 .headerTitle {
     font-size: 17px;
     font-weight: 700;
+
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -105,29 +111,26 @@ button {
     background: var(--panel3);
 }
 
-main {
-    width: 100%;
-    max-width: 1600px;
 
-    margin: 0 auto;
-    padding: 12px;
-}
+/* =========================================================
+   入力欄
+   ========================================================= */
 
 .inputFields {
-    display: grid;
+    width: 100%;
 
-    grid-template-columns:
-        minmax(0, 1fr)
-        auto
-        auto;
+    display: flex;
+
+    align-items: center;
 
     gap: 8px;
 
-    width: 100%;
+    padding: 12px;
 }
 
 #uniqueIdInput {
-    width: 100%;
+    flex: 1 1 auto;
+
     min-width: 0;
 
     height: 42px;
@@ -154,6 +157,8 @@ main {
 }
 
 .inputFields button {
+    flex: 0 0 auto;
+
     height: 42px;
 
     padding: 0 15px;
@@ -188,6 +193,11 @@ main {
     background: var(--accentHover);
 }
 
+
+/* =========================================================
+   ステータス
+   ========================================================= */
+
 .statusBar {
     display: flex;
 
@@ -198,7 +208,8 @@ main {
 
     min-height: 42px;
 
-    margin-top: 8px;
+    margin: 0 12px;
+
     padding: 8px 10px;
 
     border: 1px solid var(--border);
@@ -230,12 +241,18 @@ main {
     color: var(--subText);
 
     font-size: 13px;
+
     white-space: nowrap;
 }
 
 #roomStats b {
     color: var(--text);
 }
+
+
+/* =========================================================
+   メイン
+   ========================================================= */
 
 .mainContent {
     display: grid;
@@ -246,7 +263,7 @@ main {
 
     gap: 10px;
 
-    margin-top: 10px;
+    margin: 10px 12px 12px;
 }
 
 .chatcontainer,
@@ -273,6 +290,7 @@ main {
 .containerheader {
     position: sticky;
     top: 0;
+
     z-index: 5;
 
     margin: 0;
@@ -280,6 +298,7 @@ main {
     padding: 10px 12px;
 
     background: rgba(32, 32, 37, 0.95);
+
     border-bottom: 1px solid var(--border);
 
     font-size: 14px;
@@ -295,6 +314,7 @@ main {
     position: relative;
 
     display: flex;
+
     align-items: flex-start;
 
     gap: 9px;
@@ -311,6 +331,11 @@ main {
     background: rgba(255, 255, 255, 0.025);
 }
 
+
+/* =========================================================
+   プロフィール画像
+   ========================================================= */
+
 .miniprofilepicture {
     width: 38px;
     height: 38px;
@@ -324,16 +349,27 @@ main {
     background: #3a3a40;
 }
 
+
+/* =========================================================
+   ユーザー名
+   ========================================================= */
+
 .usernamelink {
     color: #9cb7ee !important;
 
     text-decoration: none;
+
     font-weight: 700;
 }
 
 .usernamelink:hover {
     text-decoration: underline;
 }
+
+
+/* =========================================================
+   ギフト
+   ========================================================= */
 
 .gifticon {
     width: 52px;
@@ -368,6 +404,11 @@ main {
     font-weight: 400;
 }
 
+
+/* =========================================================
+   OBS
+   ========================================================= */
+
 .eventcontainer {
     width: 100%;
     height: 100vh;
@@ -387,8 +428,14 @@ main {
     border-radius: 8px;
 }
 
+
+/* =========================================================
+   視聴者一覧
+   ========================================================= */
+
 .viewerMenuOverlay {
     position: fixed;
+
     inset: 0;
 
     z-index: 190;
@@ -417,9 +464,11 @@ main {
     z-index: 200;
 
     width: min(380px, 88vw);
+
     height: 100dvh;
 
     display: flex;
+
     flex-direction: column;
 
     background: #202025;
@@ -547,37 +596,54 @@ main {
     text-overflow: ellipsis;
 }
 
-.viewerRank {
-    margin-left: auto;
-
-    flex-shrink: 0;
-
-    color: #85858e;
-
-    font-size: 11px;
-}
-
 .viewerEmpty {
     padding: 30px 15px;
 
     color: var(--subText);
 
     text-align: center;
+
     font-size: 13px;
 }
 
+
+/* =========================================================
+   スクロールバー
+   ========================================================= */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #46464f;
+    border-radius: 10px;
+}
+
+
+/* =========================================================
+   レスポンシブ
+   ========================================================= */
+
 @media (max-width: 760px) {
 
-    main {
-        padding: 9px;
-    }
-
     .inputFields {
-        grid-template-columns: 1fr 1fr;
+        flex-wrap: wrap;
     }
 
     #uniqueIdInput {
-        grid-column: 1 / -1;
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    #connectButton,
+    #copyQueryButton {
+        flex: 1 1 0;
     }
 
     .mainContent {
@@ -593,6 +659,7 @@ main {
     .statusBar {
         align-items: flex-start;
         flex-direction: column;
+
         gap: 4px;
     }
 
@@ -608,15 +675,12 @@ main {
     }
 
     .inputFields {
-        grid-template-columns: 1fr;
+        gap: 7px;
     }
 
-    #uniqueIdInput {
-        grid-column: auto;
-    }
-
-    .inputFields button {
-        width: 100%;
+    #connectButton,
+    #copyQueryButton {
+        width: auto;
     }
 
     .chatcontainer,
@@ -627,44 +691,29 @@ main {
 
 @media (max-width: 360px) {
 
-    main {
-        padding: 7px;
-    }
-
     .head {
         padding: 0 9px;
+    }
+
+    .inputFields,
+    .statusBar {
+        margin-left: 7px;
+        margin-right: 7px;
+    }
+
+    .inputFields {
+        padding-left: 0;
+        padding-right: 0;
     }
 
     .miniprofilepicture {
         width: 34px;
         height: 34px;
+
         flex-basis: 34px;
     }
 
     .viewerMenu {
         width: 92vw;
     }
-}
-
-/* OBS */
-body.obs {
-    min-width: 200px !important;
-}
-
-.usernamelink {
-    color: #9cb7ee !important;
-}
-
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #46464f;
-    border-radius: 10px;
 }

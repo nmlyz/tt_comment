@@ -6,61 +6,87 @@ class TikTokIOConnection {
       backendUrl ||
       'https://sacrifice-nico.com';
     
-    this.socket = io(this.backendUrl, {
-      path: '/socket.io/',
-      transports: ['polling', 'websocket'],
-      upgrade: true,
-      reconnection: true
-    });
+    this.socket = io(
+      this.backendUrl,
+      {
+        path: '/socket.io/',
+        transports: [
+          'polling',
+          'websocket'
+        ],
+        upgrade: true,
+        reconnection: true
+      }
+    );
     
     this.uniqueId = null;
     this.options = null;
     
-    this.socket.on('connect', () => {
-      
-      console.info(
-        'Socket connected:',
-        this.socket.id
-      );
-      
-      if (this.uniqueId) {
-        this.setUniqueId();
+    this.socket.on(
+      'connect',
+      () => {
+        
+        console.info(
+          'Socket connected:',
+          this.socket.id
+        );
+        
+        if (this.uniqueId) {
+          this.setUniqueId();
+        }
       }
-    });
+    );
     
-    this.socket.on('disconnect', (reason) => {
-      
-      console.warn(
-        'Socket disconnected:',
-        reason
-      );
-    });
+    this.socket.on(
+      'disconnect',
+      (reason) => {
+        
+        console.warn(
+          'Socket disconnected:',
+          reason
+        );
+      }
+    );
     
-    this.socket.on('connect_error', (error) => {
-      
-      console.error(
-        'Socket connection error:',
-        error
-      );
-    });
+    this.socket.on(
+      'connect_error',
+      (error) => {
+        
+        console.error(
+          'Socket connection error:',
+          error
+        );
+      }
+    );
     
-    this.socket.on('streamEnd', () => {
-      
-      this.uniqueId = null;
-    });
-    
-    this.socket.on('tiktokDisconnected', (errMsg) => {
-      
-      console.warn(errMsg);
-      
-      if (
-        errMsg &&
-        String(errMsg).includes('LIVE has ended')
-      ) {
+    this.socket.on(
+      'streamEnd',
+      () => {
+        
         this.uniqueId = null;
       }
-    });
+    );
+    
+    this.socket.on(
+      'tiktokDisconnected',
+      (errMsg) => {
+        
+        console.warn(
+          errMsg
+        );
+        
+        if (
+          errMsg &&
+          String(errMsg)
+          .includes('LIVE has ended')
+        ) {
+          
+          this.uniqueId = null;
+        }
+      }
+    );
   }
+  
   
   connect(uniqueId, options) {
     
@@ -69,69 +95,86 @@ class TikTokIOConnection {
     
     this.setUniqueId();
     
-    return new Promise((resolve, reject) => {
-      
-      let settled = false;
-      
-      const handleConnected = (data) => {
+    return new Promise(
+      (resolve, reject) => {
         
-        if (settled) {
-          return;
-        }
+        let settled = false;
         
-        settled = true;
+        let timeoutId = null;
         
-        clearTimeout(timeoutId);
+        const handleConnected =
+          (data) => {
+            
+            if (settled) {
+              return;
+            }
+            
+            settled = true;
+            
+            clearTimeout(
+              timeoutId
+            );
+            
+            resolve(data);
+          };
         
-        resolve(data);
-      };
-      
-      const handleDisconnected = (error) => {
+        const handleDisconnected =
+          (error) => {
+            
+            if (settled) {
+              return;
+            }
+            
+            settled = true;
+            
+            clearTimeout(
+              timeoutId
+            );
+            
+            reject(error);
+          };
         
-        if (settled) {
-          return;
-        }
-        
-        settled = true;
-        
-        clearTimeout(timeoutId);
-        
-        reject(error);
-      };
-      
-      this.socket.once(
-        'tiktokConnected',
-        handleConnected
-      );
-      
-      this.socket.once(
-        'tiktokDisconnected',
-        handleDisconnected
-      );
-      
-      const timeoutId = setTimeout(() => {
-        
-        if (settled) {
-          return;
-        }
-        
-        settled = true;
-        
-        this.socket.off(
+        this.socket.once(
           'tiktokConnected',
           handleConnected
         );
         
-        this.socket.off(
+        this.socket.once(
           'tiktokDisconnected',
           handleDisconnected
         );
         
-        reject('Connection Timeout');
-        
-      }, 15000);
-    });
+        timeoutId =
+          setTimeout(
+            () => {
+              
+              if (settled) {
+                return;
+              }
+              
+              settled = true;
+              
+              this.socket.off(
+                'tiktokConnected',
+                handleConnected
+              );
+              
+              this.socket.off(
+                'tiktokDisconnected',
+                handleDisconnected
+              );
+              
+              reject(
+                'Connection Timeout'
+              );
+              
+            },
+            15000
+          );
+      }
+    );
   }
+  
   
   setUniqueId() {
     
@@ -150,6 +193,7 @@ class TikTokIOConnection {
       this.options
     );
   }
+  
   
   on(eventName, eventHandler) {
     
