@@ -119,25 +119,6 @@ const GIFT_AUDIO_POOL_SIZE =
  * ギフトが大量に来た場合、
  * 同時に音を鳴らさず、
  * ここに再生待ちとしてストックする。
- *
- * 例:
- *
- * ギフトA
- * ギフトB
- * ギフトC
- * ギフトD
- *
- * ↓
- *
- * A再生
- * ↓
- * B再生
- * ↓
- * C再生
- * ↓
- * D再生
- *
- * という順番。
  */
 const giftAudioQueue = [];
 
@@ -146,13 +127,32 @@ let giftAudioPlaying =
 
 
 /*
- * キューが増えすぎた場合の上限。
+ * キュー最大数。
  *
- * 例えば大量のギフトが一気に来ても
- * メモリが無限に増えないようにする。
+ * あまりにも大量に来た場合に
+ * 無限に増えないようにする。
  */
 const GIFT_AUDIO_QUEUE_LIMIT =
     100;
+
+
+/*
+ * ========================================================
+ * AUDIO FIRST INTERACTION
+ * ========================================================
+ *
+ * クエリ接続の場合でも
+ * 接続自体は自動で行う。
+ *
+ * 音声だけはiPhone / Safariの
+ * 自動再生制限があるため、
+ * 最初の画面操作を音声unlockに使用する。
+ */
+let audioInteractionListenerInstalled =
+    false;
+
+let audioInteractionUnlocked =
+    false;
 
 
 /* =========================================================
@@ -306,123 +306,103 @@ function loadUrlSettings() {
 
 
 /* =========================================================
-   QUERY TAP CONNECT
+   FIRST INTERACTION AUDIO UNLOCK
 ========================================================= */
 
 /*
- * クエリでusernameが指定されている場合、
- * いきなりconnect()しない。
+ * クエリ接続でも
+ * 接続自体は自動で行う。
  *
- * iPhone / Safariでは
- * 自動接続時のplay()が
- * ユーザー操作として認識されないため、
+ * ただしiOS / Safariでは
+ * ユーザー操作なしのAudio.play()が
+ * ブロックされることがある。
  *
- * 1回画面をタップ
- * ↓
- * Audio unlock
- * ↓
- * connect()
+ * そこで最初の画面操作を
+ * Audio unlock専用に使用する。
  *
- * とする。
+ * ここではconnect()を絶対に呼ばない。
  */
-function setupQueryTapConnect() {
+function setupFirstInteractionAudioUnlock() {
 
     if (
-        !window.settings.username
+        audioInteractionListenerInstalled
     ) {
 
         return;
     }
 
-    const overlay =
-        $('<div>')
-            .attr(
-                'id',
-                'queryConnectOverlay'
-            )
-            .css({
-                position: 'fixed',
-                top: '0',
-                left: '0',
-                right: '0',
-                bottom: '0',
-                width: '100%',
-                height: '100%',
-                background: 'rgba(0,0,0,0.72)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: '999999',
-                cursor: 'pointer',
-                WebkitTapHighlightColor: 'transparent'
-            });
+    audioInteractionListenerInstalled =
+        true;
 
-    const message =
-        $('<div>')
-            .css({
-                padding: '20px 28px',
-                borderRadius: '14px',
-                background: '#2C2C2E',
-                color: '#FFFFFF',
-                fontSize: '18px',
-                fontWeight: 'bold',
-                textAlign: 'center',
-                boxShadow: '0 8px 30px rgba(0,0,0,0.35)'
-            })
-            .text(
-                '画面をタップして接続'
-            );
 
-    overlay.append(
-        message
-    );
-
-    $('body').append(
-        overlay
-    );
-
-    overlay.on(
-        'click touchend',
-        function (e) {
-
-            e.preventDefault();
+    const handleFirstInteraction =
+        function () {
 
             if (
-                overlay.data(
-                    'connecting'
-                )
+                audioInteractionUnlocked
             ) {
 
                 return;
             }
 
-            overlay.data(
-                'connecting',
-                true
-            );
-
-            /*
-             * ここは実際のユーザー操作。
-             *
-             * iOSのAudio unlockを
-             * ここで行う。
-             */
             if (
-                giftAudioEnabled
+                !giftAudioEnabled
             ) {
 
-                unlockGiftAudio();
+                /*
+                 * ミュート中でも
+                 * ここではunlock処理を
+                 * 無理に行わない。
+                 *
+                 * ミュート解除ボタンを
+                 * 押した時にunlockする。
+                 */
+                return;
             }
 
-            /*
-             * オーバーレイを消す。
-             */
-            overlay.remove();
+            audioInteractionUnlocked =
+                true;
 
-            /*
-             * 接続開始。
-             */
-            connect();
+            unlockGiftAudio();
+
+        };
+
+
+    /*
+     * iPhone / iPad用。
+     *
+     * passive:falseにして
+     * touchendを確実に拾う。
+     */
+    document.addEventListener(
+        'touchend',
+        handleFirstInteraction,
+        {
+            passive: true
+        }
+    );
+
+
+    /*
+     * マウス操作やPCブラウザ用。
+     */
+    document.addEventListener(
+        'click',
+        handleFirstInteraction,
+        {
+            passive: true
+        }
+    );
+
+
+    /*
+     * キーボード操作用。
+     */
+    document.addEventListener(
+        'keydown',
+        handleFirstInteraction,
+        {
+            passive: true
         }
     );
 }
@@ -461,11 +441,14 @@ function setupGiftAudioButton() {
                 giftAudioEnabled
             ) {
 
+                audioInteractionUnlocked =
+                    true;
+
                 unlockGiftAudio();
 
                 /*
-                 * 既にキューに音声があれば
-                 * ONにした時点で再生開始。
+                 * 既にキューにあれば
+                 * 再生開始。
                  */
                 processGiftAudioQueue();
             }
@@ -723,17 +706,29 @@ $(document).ready(() => {
     setupGiftExpandButton();
 
     /*
-     * 通常の入力欄から接続。
+     * 最初のユーザー操作を
+     * Audio unlock専用にする。
      *
-     * ボタンを押した瞬間は
+     * ここではconnectしない。
+     */
+    setupFirstInteractionAudioUnlock();
+
+
+    /*
+     * 通常の接続ボタン。
+     *
+     * ボタン操作そのものが
      * ユーザー操作なので、
-     * ここでAudio unlockを行う。
+     * Audio unlockも行う。
      */
     $('#connectButton').click(function () {
 
         if (
             giftAudioEnabled
         ) {
+
+            audioInteractionUnlocked =
+                true;
 
             unlockGiftAudio();
         }
@@ -744,8 +739,6 @@ $(document).ready(() => {
 
     /*
      * Enterから接続。
-     *
-     * これもユーザー操作。
      */
     $('#uniqueIdInput').on(
         'keyup',
@@ -756,6 +749,9 @@ $(document).ready(() => {
                 if (
                     giftAudioEnabled
                 ) {
+
+                    audioInteractionUnlocked =
+                        true;
 
                     unlockGiftAudio();
                 }
@@ -784,17 +780,15 @@ $(document).ready(() => {
 
 
     /*
-     * クエリにusernameがある場合。
+     * =====================================================
+     * QUERY AUTO CONNECT
+     * =====================================================
      *
-     * ここでは直接connectしない。
+     * usernameがURLにある場合、
+     * ここでは普通に自動接続する。
      *
-     * 画面タップ
-     * ↓
-     * Audio unlock
-     * ↓
-     * connect
-     *
-     * とする。
+     * 音声unlockのために
+     * connect()を止めない。
      */
     if (
         window.settings.username
@@ -804,8 +798,7 @@ $(document).ready(() => {
             window.settings.username
         );
 
-        setupQueryTapConnect();
-
+        connect();
     }
 });
 
@@ -1449,6 +1442,8 @@ function unlockGiftAudio() {
         giftAudioUnlocked
     ) {
 
+        processGiftAudioQueue();
+
         return;
     }
 
@@ -1494,9 +1489,8 @@ function unlockGiftAudio() {
                 );
 
                 /*
-                 * unlock成功後、
-                 * 既に溜まっているギフトを
-                 * 再生する。
+                 * 既にキューに
+                 * 入っているギフトを再生。
                  */
                 processGiftAudioQueue();
 
@@ -1538,11 +1532,13 @@ function addGiftAudioToQueue() {
         return;
     }
 
+
     const random =
         Math.floor(
             Math.random() *
             GIFT_CHANCE_BASE
         ) + 1;
+
 
     let soundUrl =
         giftAudioUrl;
@@ -1560,6 +1556,7 @@ function addGiftAudioToQueue() {
 
         soundUrl =
             SUPER_RARE_GIFT_AUDIO_URL;
+
 
     /*
      * レア
@@ -1580,7 +1577,7 @@ function addGiftAudioToQueue() {
 
 
     /*
-     * キューへ追加。
+     * 再生待ちキューへ追加。
      */
     giftAudioQueue.push(
         soundUrl
@@ -1588,7 +1585,7 @@ function addGiftAudioToQueue() {
 
 
     /*
-     * キューが多すぎる場合は
+     * 上限を超えたら
      * 古いものから削除。
      */
     if (
@@ -1605,7 +1602,10 @@ function addGiftAudioToQueue() {
 
 
     /*
-     * 再生処理。
+     * 再生開始。
+     *
+     * まだunlockされていなければ
+     * ここでは待機する。
      */
     processGiftAudioQueue();
 }
@@ -1618,9 +1618,8 @@ function addGiftAudioToQueue() {
 function processGiftAudioQueue() {
 
     /*
-     * ミュート中なら再生しない。
-     *
-     * キューは残す。
+     * ミュート中なら
+     * キューを残したまま待機。
      */
     if (
         !giftAudioEnabled
@@ -1631,10 +1630,7 @@ function processGiftAudioQueue() {
 
 
     /*
-     * 既に再生中なら何もしない。
-     *
-     * 現在の音声が終わったら
-     * endedイベントから再度呼ばれる。
+     * 既に再生中なら待機。
      */
     if (
         giftAudioPlaying
@@ -1656,24 +1652,23 @@ function processGiftAudioQueue() {
 
 
     /*
-     * 音声再生がまだ許可されていない場合。
-     *
-     * iOSの場合、
-     * クエリ接続では
-     * 画面タップ後にunlockされる。
+     * iOSのAudio unlock待ち。
      */
     if (
         !giftAudioUnlocked
     ) {
 
         console.log(
-            '[DEBUG] Gift audio waiting for unlock'
+            '[DEBUG] Gift audio waiting for user interaction'
         );
 
         return;
     }
 
 
+    /*
+     * 次の音声を取り出す。
+     */
     const soundUrl =
         giftAudioQueue.shift();
 
@@ -1700,9 +1695,6 @@ function processGiftAudioQueue() {
             e
         );
 
-        /*
-         * 次の音声へ。
-         */
         setTimeout(
             processGiftAudioQueue,
             0
@@ -1716,9 +1708,6 @@ function processGiftAudioQueue() {
         true;
 
 
-    /*
-     * 現在再生中のAudioを保持。
-     */
     giftAudio =
         audio;
 
@@ -1727,9 +1716,6 @@ function processGiftAudioQueue() {
         false;
 
 
-    /*
-     * 次のギフトへ進む。
-     */
     function finishPlayback() {
 
         if (finished) {
@@ -1742,6 +1728,7 @@ function processGiftAudioQueue() {
         giftAudioPlaying =
             false;
 
+
         if (
             giftAudio === audio
         ) {
@@ -1750,18 +1737,18 @@ function processGiftAudioQueue() {
                 null;
         }
 
+
         audio.onended =
             null;
 
         audio.onerror =
             null;
 
+
         /*
-         * ほんの少しだけ間隔を空けて
-         * 次の音声を再生。
+         * 次のギフトへ。
          *
-         * 大量ギフトでも
-         * 音が重ならない。
+         * 同時再生にはしない。
          */
         setTimeout(
             processGiftAudioQueue,
@@ -1772,6 +1759,7 @@ function processGiftAudioQueue() {
 
     audio.onended =
         finishPlayback;
+
 
     audio.onerror =
         function (error) {
@@ -1800,11 +1788,13 @@ function processGiftAudioQueue() {
                         error
                     );
 
+
                     /*
                      * 自動再生制限などで
-                     * 再生できなかった場合。
+                     * 失敗した場合。
                      *
-                     * 音声をキューの先頭に戻す。
+                     * unlockされていない場合だけ
+                     * キューの先頭へ戻す。
                      */
                     if (
                         giftAudioEnabled &&
@@ -1815,6 +1805,7 @@ function processGiftAudioQueue() {
                             soundUrl
                         );
                     }
+
 
                     finishPlayback();
                 }
@@ -1828,6 +1819,7 @@ function processGiftAudioQueue() {
             e
         );
 
+
         if (
             giftAudioEnabled &&
             !giftAudioUnlocked
@@ -1837,6 +1829,7 @@ function processGiftAudioQueue() {
                 soundUrl
             );
         }
+
 
         finishPlayback();
     }
@@ -1850,8 +1843,8 @@ function processGiftAudioQueue() {
 function playGiftSound() {
 
     /*
-     * 実際には直接再生せず、
-     * 再生キューへ入れる。
+     * 直接再生せず、
+     * 再生待ちキューへ入れる。
      */
     addGiftAudioToQueue();
 }
@@ -1893,8 +1886,10 @@ function addGiftItem(data) {
             .remove();
     }
 
+
     const giftDuplicateKey =
         getGiftDuplicateKey(data);
+
 
     if (
         displayedGiftKeys.has(
@@ -1905,9 +1900,11 @@ function addGiftItem(data) {
         return;
     }
 
+
     displayedGiftKeys.add(
         giftDuplicateKey
     );
+
 
     if (
         displayedGiftKeys.size >
@@ -1934,6 +1931,7 @@ function addGiftItem(data) {
         }
     }
 
+
     const userId =
         data.userId ||
         (
@@ -1942,21 +1940,26 @@ function addGiftItem(data) {
         ) ||
         '';
 
+
     const giftId =
         data.giftId ||
         '';
+
 
     const streakId =
         String(userId) +
         '_' +
         String(giftId);
 
+
     const pending =
         isPendingStreak(data);
+
 
     const giftName =
         data.giftName ||
         'ギフト';
+
 
     const repeatCount =
         Number(
@@ -1964,26 +1967,32 @@ function addGiftItem(data) {
             1
         );
 
+
     const diamondCount =
         Number(
             data.diamondCount ||
             0
         );
 
+
     const giftPictureUrl =
         data.giftPictureUrl ||
         '';
+
 
     const profilePictureUrl =
         data.profilePictureUrl ||
         '';
 
+
     const describe =
         data.describe ||
         'ギフトを送信';
 
+
     const safeGiftName =
         sanitize(giftName);
+
 
     const safeDescribe =
         sanitize(
@@ -1994,20 +2003,25 @@ function addGiftItem(data) {
                 )
         );
 
+
     const repeatText =
         '個数: ' +
         'x' +
         repeatCount.toLocaleString();
 
+
     const cost =
         diamondCount *
         repeatCount;
 
+
     const timeText =
         formatGiftTime();
 
+
     let giftImageHtml =
         '';
+
 
     if (giftPictureUrl) {
 
@@ -2022,8 +2036,10 @@ function addGiftItem(data) {
             'loading="lazy">';
     }
 
+
     let profileImageHtml =
         '';
+
 
     if (profilePictureUrl) {
 
@@ -2037,6 +2053,7 @@ function addGiftItem(data) {
             'alt="" ' +
             'loading="lazy">';
     }
+
 
     const html =
         '<div ' +
@@ -2126,7 +2143,6 @@ function addGiftItem(data) {
                                     'コスト: <b>' +
                                     cost.toLocaleString() +
                                     ' Diamonds</b>' +
-
                                     '</span>' +
 
                                 '</td>' +
@@ -2143,6 +2159,7 @@ function addGiftItem(data) {
 
         '</div>';
 
+
     const existing =
         container
             .find(
@@ -2158,6 +2175,7 @@ function addGiftItem(data) {
                     );
                 }
             );
+
 
     if (
         pending &&
@@ -2176,7 +2194,9 @@ function addGiftItem(data) {
         );
     }
 
+
     container.stop();
+
 
     container.animate(
         {
@@ -2207,6 +2227,7 @@ function addChatItem(
             ? $('.eventcontainer')
             : $('.chatcontainer');
 
+
     if (
         container.find('div').length >
         500
@@ -2218,16 +2239,20 @@ function addChatItem(
             .remove();
     }
 
+
     container
         .find('.temporary')
         .remove();
+
 
     const profilePictureUrl =
         data.profilePictureUrl ||
         '';
 
+
     let profileImageHtml =
         '';
+
 
     if (profilePictureUrl) {
 
@@ -2241,6 +2266,7 @@ function addChatItem(
             'alt="" ' +
             'loading="lazy">';
     }
+
 
     container.append(
 
@@ -2272,6 +2298,7 @@ function addChatItem(
 
         '</div>'
     );
+
 
     if (
         container.hasClass(
@@ -2318,6 +2345,7 @@ function updateViewersFromRoomUser(msg) {
         return;
     }
 
+
     msg.ranks.forEach(
         rankItem => {
 
@@ -2329,17 +2357,21 @@ function updateViewersFromRoomUser(msg) {
                 return;
             }
 
+
             const user =
                 rankItem.user;
+
 
             const id =
                 user.id ||
                 user.idStr ||
                 user.displayId;
 
+
             if (!id) {
                 return;
             }
+
 
             viewerMap.set(
                 String(id),
@@ -2372,6 +2404,7 @@ function updateViewersFromRoomUser(msg) {
         }
     );
 
+
     updateViewerList();
 }
 
@@ -2381,16 +2414,20 @@ function updateViewerList() {
     const list =
         $('#viewerList');
 
+
     if (!list.length) {
         return;
     }
+
 
     const viewers =
         Array.from(
             viewerMap.values()
         );
 
+
     list.empty();
+
 
     viewers.forEach(
         viewer => {
@@ -2400,6 +2437,7 @@ function updateViewerList() {
                     .addClass(
                         'viewerItem'
                     );
+
 
             if (viewer.avatar) {
 
@@ -2417,11 +2455,13 @@ function updateViewerList() {
                     );
             }
 
+
             const text =
                 $('<div>')
                     .addClass(
                         'viewerItemText'
                     );
+
 
             $('<div>')
                 .addClass(
@@ -2433,6 +2473,7 @@ function updateViewerList() {
                 .appendTo(
                     text
                 );
+
 
             $('<div>')
                 .addClass(
@@ -2448,15 +2489,18 @@ function updateViewerList() {
                     text
                 );
 
+
             item.append(
                 text
             );
+
 
             list.append(
                 item
             );
         }
     );
+
 
     $('#viewerCountText').text(
         '視聴者数: ' +
@@ -2472,6 +2516,7 @@ function openViewerMenu() {
             'open'
         );
 
+
     $('#viewerMenuOverlay')
         .addClass(
             'open'
@@ -2485,6 +2530,7 @@ function closeViewerMenu() {
         .removeClass(
             'open'
         );
+
 
     $('#viewerMenuOverlay')
         .removeClass(
@@ -2513,6 +2559,7 @@ connection.on(
             updateRoomStats();
         }
 
+
         updateViewersFromRoomUser(
             msg
         );
@@ -2526,6 +2573,7 @@ connection.on(
 
 let joinMsgDelay = 0;
 
+
 connection.on(
     'member',
     (msg) => {
@@ -2538,11 +2586,14 @@ connection.on(
             return;
         }
 
+
         const addDelay =
             250;
 
+
         let actualDelay =
             addDelay;
+
 
         if (
             joinMsgDelay >
@@ -2553,6 +2604,7 @@ connection.on(
                 100;
         }
 
+
         if (
             joinMsgDelay >
             1000
@@ -2562,14 +2614,17 @@ connection.on(
                 0;
         }
 
+
         joinMsgDelay +=
             actualDelay;
+
 
         setTimeout(
             () => {
 
                 joinMsgDelay -=
                     actualDelay;
+
 
                 addChatItem(
                     '#21b2c2',
@@ -2601,6 +2656,7 @@ connection.on(
             return;
         }
 
+
         if (
             isDuplicateComment(msg)
         ) {
@@ -2608,17 +2664,20 @@ connection.on(
             return;
         }
 
+
         /*
          * 実際のコメントだけが
-         * いいね表示の抑制を解除する。
+         * いいね表示の抑制を解除。
          */
         likeMessageDisplayed =
             false;
+
 
         const comment =
             msg.comment ||
             msg.content ||
             '';
+
 
         addChatItem(
             '',
@@ -2655,8 +2714,10 @@ connection.on(
                     1
                 );
 
+
             updateRoomStats();
         }
+
 
         if (
             window.settings.showGifts ===
@@ -2666,13 +2727,15 @@ connection.on(
             return;
         }
 
+
         addGiftItem(
             data
         );
 
+
         /*
-         * 音声は直接再生せず、
-         * 再生待ちキューへ入れる。
+         * 直接再生せず、
+         * 音声キューへ入れる。
          */
         playGiftSound();
     }
@@ -2695,8 +2758,10 @@ connection.on(
             return;
         }
 
+
         let color =
             '#2fb816';
+
 
         if (
             data.displayType &&
@@ -2709,15 +2774,18 @@ connection.on(
                 '#ff005e';
         }
 
+
         let label =
             data.label ||
             '';
+
 
         label =
             label.replace(
                 '{0:user}',
                 ''
             );
+
 
         addChatItem(
             color,
@@ -2744,6 +2812,7 @@ connection.on(
             return;
         }
 
+
         if (
             data &&
             typeof data.likeCount ===
@@ -2767,7 +2836,9 @@ connection.on(
             likeCount++;
         }
 
+
         updateRoomStats();
+
 
         if (
             likeMessageDisplayed
@@ -2776,11 +2847,14 @@ connection.on(
             return;
         }
 
+
         likeMessageDisplayed =
             true;
 
+
         const messageData =
             data || {};
+
 
         addChatItem(
             '#ff6688',
@@ -2802,6 +2876,7 @@ connection.on(
         $('#stateText').text(
             '配信は終了しました。'
         );
+
 
         if (
             window.settings.username
