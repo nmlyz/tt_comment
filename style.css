@@ -8,6 +8,11 @@ body {
     padding: 0;
     width: 100%;
     height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
 }
 
 body {
@@ -21,6 +26,8 @@ body {
         sans-serif;
     font-size: 14px;
     overflow: hidden;
+    position: fixed;
+    inset: 0;
 }
 
 button,
@@ -60,6 +67,7 @@ main {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    overflow: hidden;
 }
 
 .inputFields {
@@ -138,6 +146,7 @@ main {
     justify-content: space-between;
     gap: 8px;
     flex-shrink: 0;
+    overflow: hidden;
 }
 
 #stateText {
@@ -157,54 +166,173 @@ main {
     white-space: nowrap;
 }
 
+
+/* ========================================
+   メイン領域
+   ======================================== */
+
 .mainContent {
     flex: 1;
     min-height: 0;
+
     display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(210px, 0.5fr);
-    gap: 6px;
-    padding: 6px;
+
+    grid-template-columns:
+        minmax(0, 1.5fr)
+        minmax(210px, 0.5fr);
+
+    gap: 3px;
+
+    padding: 0 6px 2px 6px;
+
     overflow: hidden;
+    overscroll-behavior: none;
 }
+
+
+/* ========================================
+   ギフト拡大
+   ======================================== */
+
+.mainContent.giftExpanded {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.mainContent.giftExpanded .chatcontainer {
+    display: none;
+}
+
+.mainContent.giftExpanded .giftcontainer {
+    width: 100%;
+}
+
+
+/* ========================================
+   チャット・ギフト本体
+   ======================================== */
 
 .chatcontainer,
 .giftcontainer {
     min-width: 0;
     min-height: 0;
+
     overflow-y: auto;
     overflow-x: hidden;
+
     background: #202025;
     border: 1px solid #36353b;
     border-radius: 8px;
+
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+
+    scrollbar-width: thin;
 }
 
 .chatcontainer {
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .giftcontainer {
     display: flex;
     flex-direction: column;
+
     overflow-y: auto;
     overflow-x: hidden;
+
     min-height: 0;
     max-height: 100%;
     height: 100%;
+
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
+
+/* ========================================
+   見出し
+   ======================================== */
+
 .containerheader {
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+
     flex-shrink: 0;
+
     margin: 0;
     padding: 7px 9px;
+
     background: #2a292f;
     border-bottom: 1px solid #3a3940;
+
     color: #dfe1e7;
     font-size: 13px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 8px;
 }
+
+.giftHeaderButtons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.containerActionButton {
+    flex-shrink: 0;
+
+    width: 30px;
+    height: 25px;
+
+    padding: 0;
+
+    border: 0;
+    border-radius: 6px;
+
+    background: #3a393f;
+    color: #e5e6ea;
+
+    font-size: 14px;
+    line-height: 25px;
+    text-align: center;
+
+    cursor: pointer;
+}
+
+.containerActionButton:active {
+    opacity: 0.7;
+}
+
+#chatAutoScrollButton {
+    font-size: 15px;
+}
+
+#chatAutoScrollButton.autoScrollOff {
+    background: #4b5362;
+    color: #ffffff;
+}
+
+#giftAudioButton.audioOff {
+    background: #4b5362;
+    color: #ffffff;
+}
+
+#giftExpandButton.expanded {
+    background: #4b5362;
+    color: #ffffff;
+}
+
+
+/* ========================================
+   チャット
+   ======================================== */
 
 .chatcontainer > div,
 .giftcontainer > div {
@@ -214,31 +342,51 @@ main {
 .chatcontainer > div {
     display: flex;
     align-items: flex-start;
+
     gap: 7px;
+
     padding: 5px 7px;
+
     border-bottom: 1px solid rgba(255, 255, 255, 0.035);
+
     line-height: 1.4;
+
+    flex-shrink: 0;
 }
+
+
+/* ========================================
+   ギフト
+   ======================================== */
 
 .giftcontainer > div {
     min-width: 0;
+
     width: calc(100% - 8px);
+
     margin: 4px 4px 5px 4px;
     padding: 4px 5px;
+
     background: #29282e;
     border-radius: 6px;
     border: 1px solid #39383e;
+
     overflow: hidden;
+
     line-height: 1.2;
+
     flex-shrink: 0;
 }
 
 .miniprofilepicture {
     width: 30px;
     height: 30px;
+
     flex: 0 0 30px;
+
     border-radius: 50%;
     object-fit: cover;
+
     background: #3a393f;
 }
 
@@ -258,11 +406,18 @@ main {
     min-width: 0;
 }
 
+
+/* ========================================
+   ギフトテーブル
+   ======================================== */
+
 .giftcontainer table {
     width: 100%;
     max-width: 100%;
+
     table-layout: fixed;
     border-collapse: collapse;
+
     margin-top: 3px;
 }
 
@@ -279,21 +434,27 @@ main {
 .giftcontainer td:last-child {
     min-width: 0;
     width: auto;
+
     overflow: hidden;
 }
 
 .gifticon {
     display: block;
+
     width: 30px;
     height: 30px;
+
     max-width: 30px;
     max-height: 30px;
+
     object-fit: contain;
 }
 
 .giftcontainer table span {
     display: inline-block;
+
     max-width: 100%;
+
     overflow-wrap: anywhere;
     word-break: break-word;
 }
@@ -306,12 +467,18 @@ main {
 .giftcontainer .giftDetail {
     font-size: 9px;
     line-height: 1.2;
+
     color: #c7c8ce;
 }
 
 .giftcontainer .giftDetail b {
     color: #e5e6ea;
 }
+
+
+/* ========================================
+   イベント
+   ======================================== */
 
 .eventcontainer {
     width: 100%;
@@ -334,20 +501,35 @@ main {
     vertical-align: middle;
 }
 
+
+/* ========================================
+   視聴者サイドメニュー
+   ======================================== */
+
 .viewerSideMenu {
     position: fixed;
     z-index: 1000;
+
     top: 0;
     right: 0;
+
     width: min(320px, 82vw);
     height: 100%;
+
     background: #222127;
+
     border-left: 1px solid #3b3a41;
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
+
+    box-shadow:
+        -8px 0 24px rgba(0, 0, 0, 0.35);
+
     transform: translateX(100%);
     transition: transform 0.2s ease;
+
     display: flex;
     flex-direction: column;
+
+    overflow: hidden;
 }
 
 .viewerSideMenu.open {
@@ -356,45 +538,65 @@ main {
 
 .viewerMenuHeader {
     height: 46px;
+
     flex-shrink: 0;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
+
     padding: 0 10px;
+
     background: #2a292f;
+
     border-bottom: 1px solid #3b3a41;
+
     font-weight: 600;
 }
 
 #viewerMenuClose {
     width: 32px;
     height: 32px;
+
     border: 0;
     border-radius: 6px;
+
     background: #3a393f;
     color: #e5e6ea;
+
     font-size: 21px;
 }
 
 .viewerCountText {
     padding: 8px 10px;
+
     color: #bfc1c8;
     font-size: 12px;
+
     border-bottom: 1px solid #35343a;
+
+    flex-shrink: 0;
 }
 
 .viewerList {
     flex: 1;
     min-height: 0;
+
     overflow-y: auto;
+
     padding: 5px;
+
+    overscroll-behavior: contain;
 }
 
 .viewerItem {
     display: flex;
     align-items: center;
+
     gap: 8px;
+
     padding: 6px;
+
     border-radius: 6px;
 }
 
@@ -405,8 +607,11 @@ main {
 .viewerItem img {
     width: 30px;
     height: 30px;
+
     flex: 0 0 30px;
+
     border-radius: 50%;
+
     object-fit: cover;
 }
 
@@ -417,7 +622,9 @@ main {
 
 .viewerItemNickname {
     color: #e3e4e8;
+
     font-size: 13px;
+
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -425,19 +632,31 @@ main {
 
 .viewerItemId {
     color: #92949c;
+
     font-size: 10px;
+
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+
+/* ========================================
+   視聴者メニュー背景
+   ======================================== */
+
 .viewerMenuOverlay {
     position: fixed;
     z-index: 999;
+
     inset: 0;
+
     background: rgba(0, 0, 0, 0.35);
+
     opacity: 0;
+
     pointer-events: none;
+
     transition: opacity 0.2s ease;
 }
 
@@ -446,19 +665,39 @@ main {
     pointer-events: auto;
 }
 
+
+/* ========================================
+   スマホ
+   ======================================== */
+
 @media (max-width: 700px) {
 
     .mainContent {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: minmax(0, 1.55fr) minmax(130px, 0.45fr);
+
+        /*
+         * チャット : ギフト = 7 : 3
+         * つまり 3.5 : 1.5
+         */
+        grid-template-rows: 7fr 3fr;
+
+        padding: 0 6px 2px 6px;
+
+        gap: 3px;
+    }
+
+    .mainContent.giftExpanded {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
     }
 
     .giftcontainer {
-        min-height: 130px;
+        min-height: 0;
     }
 
     .giftcontainer > div {
         width: calc(100% - 6px);
+
         margin-left: 3px;
         margin-right: 3px;
     }
@@ -466,6 +705,7 @@ main {
     .gifticon {
         width: 32px;
         height: 32px;
+
         max-width: 32px;
         max-height: 32px;
     }
@@ -479,6 +719,11 @@ main {
     }
 }
 
+
+/* ========================================
+   小さいスマホ
+   ======================================== */
+
 @media (max-width: 420px) {
 
     .inputRow {
@@ -491,8 +736,14 @@ main {
     }
 
     .mainContent {
-        padding: 4px;
-        gap: 4px;
+        padding: 0 4px 2px 4px;
+
+        /*
+         * チャット : ギフト = 7 : 3
+         */
+        grid-template-rows: 7fr 3fr;
+
+        gap: 2px;
     }
 
     .giftcontainer > div {
@@ -510,6 +761,7 @@ main {
     .gifticon {
         width: 30px;
         height: 30px;
+
         max-width: 30px;
         max-height: 30px;
     }
@@ -517,5 +769,11 @@ main {
     .giftcontainer td:first-child {
         width: 35px;
         padding-right: 4px;
+    }
+
+    .containerActionButton {
+        width: 29px;
+        height: 24px;
+        line-height: 24px;
     }
 }

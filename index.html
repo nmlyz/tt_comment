@@ -3,23 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
 
     <title>TikTok LIVE コメントビューアー</title>
 
-    <meta name="description" content="TikTok LIVEのコメントビューアー">
-    <meta name="keywords" content="TikTok,Live,ライブ,コメント,コメビュ,コメントビューアー,コメントビューワー">
+    <meta
+        name="description"
+        content="TikTok LIVEのコメントビューアー"
+    >
+
+    <meta
+        name="keywords"
+        content="TikTok,Live,ライブ,コメント,コメビュ,コメントビューアー,コメントビューワー"
+    >
 
     <link rel="icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
-            crossorigin="anonymous"
-            referrerpolicy="no-referrer"></script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+    ></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"
-            crossorigin="anonymous"
-            referrerpolicy="no-referrer"></script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+    ></script>
 
     <script src="connection.js"></script>
     <script src="app.js"></script>
@@ -28,31 +43,63 @@
 <body>
 
     <header class="head">
-        <button id="viewerMenuButton" class="viewerMenuButton" type="button">
+
+        <button
+            id="viewerMenuButton"
+            class="viewerMenuButton"
+            type="button"
+        >
             ☰
         </button>
+
     </header>
 
-    <div id="viewerSideMenu" class="viewerSideMenu">
+
+    <div
+        id="viewerSideMenu"
+        class="viewerSideMenu"
+    >
+
         <div class="viewerMenuHeader">
+
             <span>視聴者</span>
-            <button id="viewerMenuClose" type="button">×</button>
+
+            <button
+                id="viewerMenuClose"
+                type="button"
+            >
+                ×
+            </button>
+
         </div>
 
-        <div id="viewerCountText" class="viewerCountText">
+        <div
+            id="viewerCountText"
+            class="viewerCountText"
+        >
             視聴者数: 0
         </div>
 
-        <div id="viewerList" class="viewerList"></div>
+        <div
+            id="viewerList"
+            class="viewerList"
+        ></div>
+
     </div>
 
-    <div id="viewerMenuOverlay" class="viewerMenuOverlay"></div>
+
+    <div
+        id="viewerMenuOverlay"
+        class="viewerMenuOverlay"
+    ></div>
+
 
     <main>
 
         <div class="inputFields">
 
             <div class="inputRow">
+
                 <input
                     type="text"
                     id="uniqueIdInput"
@@ -60,30 +107,90 @@
                     autocomplete="off"
                 >
 
-                <button id="copyUrlButton" type="button">
+                <button
+                    id="copyUrlButton"
+                    type="button"
+                >
                     URLコピー
                 </button>
+
             </div>
 
-            <button id="connectButton" type="button">
+            <button
+                id="connectButton"
+                type="button"
+            >
                 接続
             </button>
 
         </div>
 
+
         <div class="statusBar">
+
             <pre id="stateText"></pre>
+
             <div id="roomStats"></div>
+
         </div>
+
 
         <div class="mainContent">
 
             <div class="chatcontainer">
-                <h3 class="containerheader">チャット</h3>
+
+                <h3 class="containerheader">
+
+                    <span>
+                        チャット
+                    </span>
+
+                    <button
+                        id="chatAutoScrollButton"
+                        class="containerActionButton"
+                        type="button"
+                        title="チャット自動スクロール"
+                    >
+                        ↓
+                    </button>
+
+                </h3>
+
             </div>
 
+
             <div class="giftcontainer">
-                <h3 class="containerheader">ギフト</h3>
+
+                <h3 class="containerheader">
+
+                    <span>
+                        ギフト
+                    </span>
+
+                    <span class="giftHeaderButtons">
+
+                        <button
+                            id="giftAudioButton"
+                            class="containerActionButton"
+                            type="button"
+                            title="ギフト音をオフ"
+                        >
+                            🔊
+                        </button>
+
+                        <button
+                            id="giftExpandButton"
+                            class="containerActionButton"
+                            type="button"
+                            title="ギフトを拡大"
+                        >
+                            ⛶
+                        </button>
+
+                    </span>
+
+                </h3>
+
             </div>
 
         </div>

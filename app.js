@@ -14,8 +14,39 @@ const COMMENT_DUPLICATE_WINDOW = 3000;
 
 let likeMessageDisplayed = false;
 
+
+/* =========================================================
+   GIFT AUDIO
+========================================================= */
+
 let giftAudio = null;
 let giftAudioUnlocked = false;
+
+let giftAudioEnabled = true;
+
+let giftAudioUrl = './gift.mp3';
+
+const giftAudioPool = [];
+const GIFT_AUDIO_POOL_SIZE = 8;
+
+
+/* =========================================================
+   CHAT AUTO SCROLL
+========================================================= */
+
+let chatAutoScrollEnabled = true;
+
+
+/* =========================================================
+   GIFT EXPAND
+========================================================= */
+
+let giftExpanded = false;
+
+
+/* =========================================================
+   SETTINGS
+========================================================= */
 
 if (!window.settings) {
     window.settings = {};
@@ -47,7 +78,8 @@ function normalizeUniqueId(value) {
 
             const url = new URL(value);
 
-            const match = url.pathname.match(/@([^/]+)/);
+            const match =
+                url.pathname.match(/@([^/]+)/);
 
             if (match && match[1]) {
                 return match[1];
@@ -55,7 +87,11 @@ function normalizeUniqueId(value) {
         }
 
     } catch (e) {
-        console.warn('URL parse error:', e);
+
+        console.warn(
+            'URL parse error:',
+            e
+        );
     }
 
     if (value.startsWith('@')) {
@@ -68,16 +104,18 @@ function normalizeUniqueId(value) {
 
 function loadUrlSettings() {
 
-    const params = new URLSearchParams(
-        window.location.search
-    );
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
 
-    const username = params.get('username');
+    const username =
+        params.get('username');
 
     if (username) {
-        window.settings.username = normalizeUniqueId(
-            username
-        );
+
+        window.settings.username =
+            normalizeUniqueId(username);
     }
 
     params.forEach((value, key) => {
@@ -86,6 +124,301 @@ function loadUrlSettings() {
             window.settings[key] = value;
         }
     });
+
+    if (
+        window.settings.giftSound
+    ) {
+
+        giftAudioUrl =
+            String(
+                window.settings.giftSound
+            ).trim();
+
+        if (!giftAudioUrl) {
+            giftAudioUrl = './gift.mp3';
+        }
+    }
+
+    /*
+     * giftMute
+     *
+     * 0 = ON
+     * 1 = OFF
+     */
+    if (
+        window.settings.giftMute === '1'
+    ) {
+
+        giftAudioEnabled = false;
+
+    } else if (
+        window.settings.giftMute === '0'
+    ) {
+
+        giftAudioEnabled = true;
+    }
+}
+
+
+/* =========================================================
+   GIFT AUDIO BUTTON
+========================================================= */
+
+function setupGiftAudioButton() {
+
+    const button =
+        $('#giftAudioButton');
+
+    if (!button.length) {
+        return;
+    }
+
+    button.off(
+        'click'
+    );
+
+    button.on(
+        'click',
+        function () {
+
+            giftAudioEnabled =
+                !giftAudioEnabled;
+
+            updateGiftAudioButton();
+        }
+    );
+
+    updateGiftAudioButton();
+}
+
+
+function updateGiftAudioButton() {
+
+    const button =
+        $('#giftAudioButton');
+
+    if (!button.length) {
+        return;
+    }
+
+    if (giftAudioEnabled) {
+
+        button.text(
+            '🔊'
+        );
+
+        button.attr(
+            'title',
+            'ギフト音をオフ'
+        );
+
+        button.removeClass(
+            'audioOff'
+        );
+
+    } else {
+
+        button.text(
+            '🔇'
+        );
+
+        button.attr(
+            'title',
+            'ギフト音をオン'
+        );
+
+        button.addClass(
+            'audioOff'
+        );
+    }
+}
+
+
+/* =========================================================
+   CHAT AUTO SCROLL BUTTON
+========================================================= */
+
+function setupChatAutoScrollButton() {
+
+    const button =
+        $('#chatAutoScrollButton');
+
+    if (!button.length) {
+        return;
+    }
+
+    button.off(
+        'click'
+    );
+
+    button.on(
+        'click',
+        function () {
+
+            chatAutoScrollEnabled =
+                !chatAutoScrollEnabled;
+
+            updateChatAutoScrollButton();
+
+            if (
+                chatAutoScrollEnabled
+            ) {
+
+                scrollChatToBottom();
+            }
+        }
+    );
+
+    updateChatAutoScrollButton();
+}
+
+
+function updateChatAutoScrollButton() {
+
+    const button =
+        $('#chatAutoScrollButton');
+
+    if (!button.length) {
+        return;
+    }
+
+    if (chatAutoScrollEnabled) {
+
+        button.text(
+            '↓'
+        );
+
+        button.attr(
+            'title',
+            '自動スクロールをオフ'
+        );
+
+        button.removeClass(
+            'autoScrollOff'
+        );
+
+    } else {
+
+        button.text(
+            '⏸'
+        );
+
+        button.attr(
+            'title',
+            '自動スクロールをオン'
+        );
+
+        button.addClass(
+            'autoScrollOff'
+        );
+    }
+}
+
+
+function scrollChatToBottom() {
+
+    const container =
+        $('.chatcontainer');
+
+    if (!container.length) {
+        return;
+    }
+
+    container.stop();
+
+    container.animate(
+        {
+            scrollTop:
+                container[0]
+                    .scrollHeight
+        },
+        400
+    );
+}
+
+
+/* =========================================================
+   GIFT EXPAND BUTTON
+========================================================= */
+
+function setupGiftExpandButton() {
+
+    const button =
+        $('#giftExpandButton');
+
+    if (!button.length) {
+        return;
+    }
+
+    button.off(
+        'click'
+    );
+
+    button.on(
+        'click',
+        function () {
+
+            giftExpanded =
+                !giftExpanded;
+
+            updateGiftExpandedState();
+        }
+    );
+
+    updateGiftExpandedState();
+}
+
+
+function updateGiftExpandedState() {
+
+    const mainContent =
+        $('.mainContent');
+
+    const button =
+        $('#giftExpandButton');
+
+    if (!mainContent.length) {
+        return;
+    }
+
+    if (giftExpanded) {
+
+        mainContent.addClass(
+            'giftExpanded'
+        );
+
+        button.text(
+            '⛶'
+        );
+
+        button.attr(
+            'title',
+            'ギフトを元に戻す'
+        );
+
+        button.addClass(
+            'expanded'
+        );
+
+    } else {
+
+        mainContent.removeClass(
+            'giftExpanded'
+        );
+
+        button.text(
+            '⛶'
+        );
+
+        button.attr(
+            'title',
+            'ギフトを拡大'
+        );
+
+        button.removeClass(
+            'expanded'
+        );
+    }
 }
 
 
@@ -97,23 +430,44 @@ $(document).ready(() => {
 
     loadUrlSettings();
 
+    setupGiftAudioButton();
+
+    setupChatAutoScrollButton();
+
+    setupGiftExpandButton();
+
     $('#connectButton').click(function () {
+
         unlockGiftAudio();
+
         connect();
     });
 
-    $('#uniqueIdInput').on('keyup', function (e) {
+    $('#uniqueIdInput').on(
+        'keyup',
+        function (e) {
 
-        if (e.key === 'Enter') {
-            connect();
+            if (e.key === 'Enter') {
+                connect();
+            }
         }
-    });
+    );
 
-    $('#copyUrlButton').click(copyQueryUrl);
+    $('#copyUrlButton').click(
+        copyQueryUrl
+    );
 
-    $('#viewerMenuButton').click(openViewerMenu);
-    $('#viewerMenuClose').click(closeViewerMenu);
-    $('#viewerMenuOverlay').click(closeViewerMenu);
+    $('#viewerMenuButton').click(
+        openViewerMenu
+    );
+
+    $('#viewerMenuClose').click(
+        closeViewerMenu
+    );
+
+    $('#viewerMenuOverlay').click(
+        closeViewerMenu
+    );
 
     if (window.settings.username) {
 
@@ -136,20 +490,25 @@ function connect() {
         window.settings.username ||
         $('#uniqueIdInput').val();
 
-    uniqueId = normalizeUniqueId(uniqueId);
+    uniqueId =
+        normalizeUniqueId(uniqueId);
 
     if (uniqueId !== '') {
 
-        $('#stateText').text('接続中...');
+        $('#stateText').text(
+            '接続中...'
+        );
 
-        connection.connect(uniqueId, {
-            enableExtendedGiftInfo: true
-        }).then(state => {
+        connection.connect(
+            uniqueId,
+            {
+                enableExtendedGiftInfo: true
+            }
+        ).then(state => {
 
             $('#stateText').text(
-                'ルームID ' +
-                state.roomId +
-                ' に接続'
+                '接続:' +
+                state.roomId
             );
 
             viewerCount = 0;
@@ -170,7 +529,9 @@ function connect() {
             if (window.settings.username) {
 
                 setTimeout(() => {
+
                     connect();
+
                 }, 30000);
             }
         });
@@ -190,9 +551,11 @@ function connect() {
 
 function copyQueryUrl() {
 
-    let username = $('#uniqueIdInput').val();
+    let username =
+        $('#uniqueIdInput').val();
 
-    username = normalizeUniqueId(username);
+    username =
+        normalizeUniqueId(username);
 
     if (!username) {
 
@@ -203,11 +566,40 @@ function copyQueryUrl() {
         return;
     }
 
+    const params =
+        new URLSearchParams();
+
+    params.set(
+        'username',
+        username
+    );
+
+    if (
+        window.settings.giftSound
+    ) {
+
+        params.set(
+            'giftSound',
+            window.settings.giftSound
+        );
+    }
+
+    if (
+        window.settings.giftMute === '0' ||
+        window.settings.giftMute === '1'
+    ) {
+
+        params.set(
+            'giftMute',
+            window.settings.giftMute
+        );
+    }
+
     const url =
         window.location.origin +
         window.location.pathname +
-        '?username=' +
-        encodeURIComponent(username);
+        '?' +
+        params.toString();
 
     if (
         navigator.clipboard &&
@@ -217,17 +609,27 @@ function copyQueryUrl() {
         navigator.clipboard.writeText(url)
             .then(() => {
 
-                const button = $('#copyUrlButton');
-                const oldText = button.text();
+                const button =
+                    $('#copyUrlButton');
 
-                button.text('コピーしました');
+                const oldText =
+                    button.text();
+
+                button.text(
+                    'コピーしました'
+                );
 
                 setTimeout(() => {
-                    button.text(oldText);
+
+                    button.text(
+                        oldText
+                    );
+
                 }, 1500);
 
             })
             .catch(() => {
+
                 fallbackCopy(url);
             });
 
@@ -241,28 +643,41 @@ function copyQueryUrl() {
 function fallbackCopy(text) {
 
     const textarea =
-        document.createElement('textarea');
+        document.createElement(
+            'textarea'
+        );
 
-    textarea.value = text;
+    textarea.value =
+        text;
 
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
+    textarea.style.position =
+        'fixed';
 
-    document.body.appendChild(textarea);
+    textarea.style.left =
+        '-9999px';
+
+    document.body.appendChild(
+        textarea
+    );
 
     textarea.select();
 
     try {
-        document.execCommand('copy');
+
+        document.execCommand(
+            'copy'
+        );
 
         $('#copyUrlButton').text(
             'コピーしました'
         );
 
         setTimeout(() => {
+
             $('#copyUrlButton').text(
                 'URLコピー'
             );
+
         }, 1500);
 
     } catch (e) {
@@ -273,7 +688,9 @@ function fallbackCopy(text) {
         );
     }
 
-    document.body.removeChild(textarea);
+    document.body.removeChild(
+        textarea
+    );
 }
 
 
@@ -283,9 +700,11 @@ function fallbackCopy(text) {
 
 function generateOverlay() {
 
-    let username = $('#uniqueIdInput').val();
+    let username =
+        $('#uniqueIdInput').val();
 
-    username = normalizeUniqueId(username);
+    username =
+        normalizeUniqueId(username);
 
     if (!username) {
 
@@ -302,29 +721,58 @@ function generateOverlay() {
             window.location.href
         ).href;
 
-    const params = new URLSearchParams();
+    const params =
+        new URLSearchParams();
 
-    params.set('username', username);
-    params.set('showLikes', '1');
-    params.set('showChats', '1');
-    params.set('showGifts', '1');
-    params.set('showFollows', '1');
-    params.set('showJoins', '1');
+    params.set(
+        'username',
+        username
+    );
+
+    params.set(
+        'showLikes',
+        '1'
+    );
+
+    params.set(
+        'showChats',
+        '1'
+    );
+
+    params.set(
+        'showGifts',
+        '1'
+    );
+
+    params.set(
+        'showFollows',
+        '1'
+    );
+
+    params.set(
+        'showJoins',
+        '1'
+    );
+
     params.set(
         'bgColor',
         'rgb(24,23,28)'
     );
+
     params.set(
         'fontColor',
         'rgb(227,229,235)'
     );
+
     params.set(
         'fontSize',
         '1.3em'
     );
 
     window.open(
-        baseUrl + '?' + params.toString(),
+        baseUrl +
+        '?' +
+        params.toString(),
         '_blank'
     );
 }
@@ -336,22 +784,42 @@ function generateOverlay() {
 
 function sanitize(text) {
 
-    if (text === undefined || text === null) {
+    if (
+        text === undefined ||
+        text === null
+    ) {
+
         return '';
     }
 
     return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+        .replace(
+            /&/g,
+            '&amp;'
+        )
+        .replace(
+            /</g,
+            '&lt;'
+        )
+        .replace(
+            />/g,
+            '&gt;'
+        )
+        .replace(
+            /"/g,
+            '&quot;'
+        )
+        .replace(
+            /'/g,
+            '&#039;'
+        );
 }
 
 
 function updateRoomStats() {
 
     $('#roomStats').html(
+
         '視聴者数: <b>' +
         viewerCount.toLocaleString() +
         '</b>　いいね: <b>' +
@@ -378,7 +846,8 @@ function generateUsernameLink(data) {
         ) ||
         '';
 
-    const safeId = sanitize(uniqueId);
+    const safeId =
+        sanitize(uniqueId);
 
     if (!safeId) {
         return 'ユーザー';
@@ -406,11 +875,17 @@ function getCommentDuplicateKey(data) {
         data.common &&
         data.common.msgId
     ) {
+
         return 'msg:' +
-            String(data.common.msgId);
+            String(
+                data.common.msgId
+            );
     }
 
-    if (data && data.msgId) {
+    if (
+        data &&
+        data.msgId
+    ) {
 
         return 'msg:' +
             String(data.msgId);
@@ -421,8 +896,11 @@ function getCommentDuplicateKey(data) {
         data.common &&
         data.common.logId
     ) {
+
         return 'log:' +
-            String(data.common.logId);
+            String(
+                data.common.logId
+            );
     }
 
     const userId =
@@ -443,7 +921,10 @@ function getCommentDuplicateKey(data) {
             ''
         );
 
-    if (userId && comment) {
+    if (
+        userId &&
+        comment
+    ) {
 
         return (
             'fallback:' +
@@ -459,32 +940,46 @@ function getCommentDuplicateKey(data) {
 
 function isDuplicateComment(data) {
 
-    const key = getCommentDuplicateKey(data);
+    const key =
+        getCommentDuplicateKey(data);
 
     if (!key) {
         return false;
     }
 
-    const now = Date.now();
+    const now =
+        Date.now();
 
-    for (const [
-        oldKey,
-        timestamp
-    ] of recentComments.entries()) {
+    for (
+        const [
+            oldKey,
+            timestamp
+        ]
+        of recentComments.entries()
+    ) {
 
         if (
             now - timestamp >
             COMMENT_DUPLICATE_WINDOW
         ) {
-            recentComments.delete(oldKey);
+
+            recentComments.delete(
+                oldKey
+            );
         }
     }
 
-    if (recentComments.has(key)) {
+    if (
+        recentComments.has(key)
+    ) {
+
         return true;
     }
 
-    recentComments.set(key, now);
+    recentComments.set(
+        key,
+        now
+    );
 
     return false;
 }
@@ -504,50 +999,120 @@ function isPendingStreak(data) {
 }
 
 
-function ensureGiftAudio() {
+/*
+ * ギフト音を複数個あらかじめ用意する。
+ *
+ * これにより、
+ *
+ * gift 1 → 再生中
+ * gift 2 → 別Audioで再生
+ * gift 3 → 別Audioで再生
+ *
+ * のように重ねて再生できる。
+ */
+function prepareGiftAudioPool() {
 
-    if (!giftAudio) {
+    if (
+        giftAudioPool.length > 0
+    ) {
 
-        giftAudio = new Audio(
-            './gift.mp3'
-        );
-
-        giftAudio.preload = 'auto';
+        return;
     }
 
-    return giftAudio;
+    for (
+        let i = 0;
+        i < GIFT_AUDIO_POOL_SIZE;
+        i++
+    ) {
+
+        const audio =
+            new Audio(
+                giftAudioUrl
+            );
+
+        audio.preload =
+            'auto';
+
+        audio.volume =
+            1.0;
+
+        giftAudioPool.push(
+            audio
+        );
+    }
+
+    /*
+     * 従来の変数も維持
+     */
+    if (
+        !giftAudio &&
+        giftAudioPool.length > 0
+    ) {
+
+        giftAudio =
+            giftAudioPool[0];
+    }
 }
 
 
+/*
+ * Connectボタンを押したときだけ
+ * 無音でAudioを再生して、
+ * iPhone等のブラウザ側の
+ * Audio再生許可を取得する。
+ *
+ * ここでは絶対に音を鳴らさない。
+ */
 function unlockGiftAudio() {
 
-    if (giftAudioUnlocked) {
+    if (
+        giftAudioUnlocked
+    ) {
+
         return;
     }
 
     try {
 
-        const audio = ensureGiftAudio();
+        prepareGiftAudioPool();
 
-        audio.muted = true;
+        const audio =
+            giftAudioPool[0];
 
-        const promise = audio.play();
+        audio.muted =
+            true;
+
+        audio.currentTime =
+            0;
+
+        const promise =
+            audio.play();
 
         if (promise) {
 
             promise.then(() => {
 
                 audio.pause();
-                audio.currentTime = 0;
-                audio.muted = false;
 
-                giftAudioUnlocked = true;
+                audio.currentTime =
+                    0;
 
-            }).catch(() => {
+                audio.muted =
+                    false;
 
-                audio.muted = false;
+                giftAudioUnlocked =
+                    true;
+
+            }).catch(error => {
+
+                audio.muted =
+                    false;
+
+                console.warn(
+                    'Gift audio unlock failed:',
+                    error
+                );
             });
-
         }
 
     } catch (e) {
@@ -560,17 +1125,91 @@ function unlockGiftAudio() {
 }
 
 
+/*
+ * 実際のギフト受信時だけ呼ばれる。
+ *
+ * 再生中のAudioを探して止めることはしない。
+ * 空いているAudioを使用するため、
+ * 複数のgift.mp3が同時再生できる。
+ */
 function playGiftSound() {
+
+    if (!giftAudioEnabled) {
+        return;
+    }
 
     try {
 
-        const audio = ensureGiftAudio();
+        prepareGiftAudioPool();
 
-        audio.pause();
-        audio.currentTime = 0;
-        audio.muted = false;
+        let audio =
+            null;
 
-        const promise = audio.play();
+        /*
+         * 再生していないAudioを探す。
+         */
+        for (
+            let i = 0;
+            i < giftAudioPool.length;
+            i++
+        ) {
+
+            const candidate =
+                giftAudioPool[i];
+
+            if (
+                candidate.paused ||
+                candidate.ended
+            ) {
+
+                audio =
+                    candidate;
+
+                break;
+            }
+        }
+
+        /*
+         * 全部使用中なら、
+         * 新しいAudioを追加する。
+         */
+        if (!audio) {
+
+            audio =
+                new Audio(
+                    giftAudioUrl
+                );
+
+            audio.preload =
+                'auto';
+
+            audio.volume =
+                1.0;
+
+            giftAudioPool.push(
+                audio
+            );
+        }
+
+        /*
+         * このAudio自身が前回の再生を
+         * 終えている場合だけ先頭から再生。
+         */
+        if (
+            audio.ended ||
+            audio.currentTime >=
+            audio.duration
+        ) {
+
+            audio.currentTime =
+                0;
+        }
+
+        audio.muted =
+            false;
+
+        const promise =
+            audio.play();
 
         if (promise) {
 
@@ -595,7 +1234,8 @@ function playGiftSound() {
 
 function formatGiftTime() {
 
-    const now = new Date();
+    const now =
+        new Date();
 
     return now.toLocaleTimeString(
         'ja-JP',
@@ -611,11 +1251,16 @@ function formatGiftTime() {
 function addGiftItem(data) {
 
     let container =
-        location.href.includes('obs.html')
+        location.href.includes(
+            'obs.html'
+        )
             ? $('.eventcontainer')
             : $('.giftcontainer');
 
-    if (container.find('div').length > 200) {
+    if (
+        container.find('div').length >
+        200
+    ) {
 
         container
             .find('div')
@@ -648,10 +1293,16 @@ function addGiftItem(data) {
         'ギフト';
 
     const repeatCount =
-        Number(data.repeatCount || 1);
+        Number(
+            data.repeatCount ||
+            1
+        );
 
     const diamondCount =
-        Number(data.diamondCount || 0);
+        Number(
+            data.diamondCount ||
+            0
+        );
 
     const giftPictureUrl =
         data.giftPictureUrl ||
@@ -671,7 +1322,10 @@ function addGiftItem(data) {
     const safeDescribe =
         sanitize(
             String(describe)
-                .replace(/^Sent\s+/i, '')
+                .replace(
+                    /^Sent\s+/i,
+                    ''
+                )
         );
 
     const repeatText =
@@ -686,37 +1340,59 @@ function addGiftItem(data) {
     const timeText =
         formatGiftTime();
 
-    let giftImageHtml = '';
+    let giftImageHtml =
+        '';
 
     if (giftPictureUrl) {
 
         giftImageHtml =
             '<img class="gifticon" ' +
             'src="' +
-            sanitize(giftPictureUrl) +
+            sanitize(
+                giftPictureUrl
+            ) +
             '" ' +
             'alt="" ' +
             'loading="lazy">';
     }
 
-    let profileImageHtml = '';
+    let profileImageHtml =
+        '';
 
     if (profilePictureUrl) {
 
         profileImageHtml =
             '<img class="miniprofilepicture" ' +
             'src="' +
-            sanitize(profilePictureUrl) +
+            sanitize(
+                profilePictureUrl
+            ) +
             '" ' +
             'alt="" ' +
             'loading="lazy">';
     }
 
+    /*
+     * ギフト表示名だけ nickname を使用。
+     *
+     * displayId はここでは表示に使わない。
+     * 直リンクや接続処理には影響しない。
+     */
+    const giftNickname =
+        data.nickname ||
+        (
+            data.user &&
+            data.user.nickname
+        ) ||
+        'ユーザー';
+
     const html =
         '<div ' +
         'data-streakid="' +
         sanitize(
-            pending ? streakId : ''
+            pending
+                ? streakId
+                : ''
         ) +
         '">' +
 
@@ -736,7 +1412,9 @@ function addGiftItem(data) {
                 '">' +
 
                     '<b>' +
-                    generateUsernameLink(data) +
+                    sanitize(
+                        giftNickname
+                    ) +
                     ':</b> ' +
 
                     '<span class="giftTitle">' +
@@ -774,7 +1452,9 @@ function addGiftItem(data) {
                                     '<span ' +
                                     'class="giftDetail">' +
                                     'ID: <b>' +
-                                    sanitize(giftId) +
+                                    sanitize(
+                                        giftId
+                                    ) +
                                     '</b>' +
                                     '</span>' +
 
@@ -782,7 +1462,9 @@ function addGiftItem(data) {
 
                                     '<span ' +
                                     'class="giftDetail">' +
-                                    sanitize(repeatText) +
+                                    sanitize(
+                                        repeatText
+                                    ) +
                                     '</span>' +
 
                                     '<br>' +
@@ -810,26 +1492,35 @@ function addGiftItem(data) {
 
     const existing =
         container
-            .find('[data-streakid]')
-            .filter(function () {
+            .find(
+                '[data-streakid]'
+            )
+            .filter(
+                function () {
 
-                return (
-                    $(this).attr(
-                        'data-streakid'
-                    ) === streakId
-                );
-            });
+                    return (
+                        $(this).attr(
+                            'data-streakid'
+                        ) === streakId
+                    );
+                }
+            );
 
     if (
         pending &&
         existing.length
     ) {
 
-        existing.first().replaceWith(html);
+        existing.first()
+            .replaceWith(
+                html
+            );
 
     } else {
 
-        container.append(html);
+        container.append(
+            html
+        );
     }
 
     container.stop();
@@ -837,7 +1528,8 @@ function addGiftItem(data) {
     container.animate(
         {
             scrollTop:
-                container[0].scrollHeight
+                container[0]
+                    .scrollHeight
         },
         400
     );
@@ -856,7 +1548,9 @@ function addChatItem(
 ) {
 
     let container =
-        location.href.includes('obs.html')
+        location.href.includes(
+            'obs.html'
+        )
             ? $('.eventcontainer')
             : $('.chatcontainer');
 
@@ -879,18 +1573,37 @@ function addChatItem(
         data.profilePictureUrl ||
         '';
 
-    let profileImageHtml = '';
+    let profileImageHtml =
+        '';
 
     if (profilePictureUrl) {
 
         profileImageHtml =
             '<img class="miniprofilepicture" ' +
             'src="' +
-            sanitize(profilePictureUrl) +
+            sanitize(
+                profilePictureUrl
+            ) +
             '" ' +
             'alt="" ' +
             'loading="lazy">';
     }
+
+    /*
+     * チャット表示名だけ nickname を使用。
+     *
+     * displayId は generateUsernameLink()
+     * 内で使用しており、
+     * TikTokプロフィールへのリンクや
+     * 直リンク・接続処理には影響させない。
+     */
+    const chatNickname =
+        data.nickname ||
+        (
+            data.user &&
+            data.user.nickname
+        ) ||
+        'ユーザー';
 
     container.append(
 
@@ -907,7 +1620,9 @@ function addChatItem(
             '<span style="min-width:0;">' +
 
                 '<b>' +
-                generateUsernameLink(data) +
+                sanitize(
+                    chatNickname
+                ) +
                 ':</b> ' +
 
                 '<span style="color:' +
@@ -921,15 +1636,38 @@ function addChatItem(
         '</div>'
     );
 
-    container.stop();
+    /*
+     * 通常のチャットだけ
+     * 自動スクロール設定に従う。
+     *
+     * OBSのeventcontainerは従来通り。
+     */
+    if (
+        container.hasClass(
+            'chatcontainer'
+        )
+    ) {
 
-    container.animate(
-        {
-            scrollTop:
-                container[0].scrollHeight
-        },
-        400
-    );
+        if (
+            chatAutoScrollEnabled
+        ) {
+
+            scrollChatToBottom();
+        }
+
+    } else {
+
+        container.stop();
+
+        container.animate(
+            {
+                scrollTop:
+                    container[0]
+                        .scrollHeight
+            },
+            400
+        );
+    }
 }
 
 
@@ -941,54 +1679,67 @@ function updateViewersFromRoomUser(msg) {
 
     if (
         !msg ||
-        !Array.isArray(msg.ranks)
+        !Array.isArray(
+            msg.ranks
+        )
     ) {
+
         return;
     }
 
-    msg.ranks.forEach(rankItem => {
+    msg.ranks.forEach(
+        rankItem => {
 
-        if (!rankItem || !rankItem.user) {
-            return;
-        }
+            if (
+                !rankItem ||
+                !rankItem.user
+            ) {
 
-        const user =
-            rankItem.user;
-
-        const id =
-            user.id ||
-            user.idStr ||
-            user.displayId;
-
-        if (!id) {
-            return;
-        }
-
-        viewerMap.set(
-            String(id),
-            {
-                id: String(id),
-
-                nickname:
-                    user.nickname ||
-                    user.displayId ||
-                    'ユーザー',
-
-                displayId:
-                    user.displayId ||
-                    '',
-
-                avatar:
-                    user.avatarThumb &&
-                    Array.isArray(
-                        user.avatarThumb.urlList
-                    ) &&
-                    user.avatarThumb.urlList.length
-                        ? user.avatarThumb.urlList[0]
-                        : ''
+                return;
             }
-        );
-    });
+
+            const user =
+                rankItem.user;
+
+            const id =
+                user.id ||
+                user.idStr ||
+                user.displayId;
+
+            if (!id) {
+                return;
+            }
+
+            viewerMap.set(
+                String(id),
+                {
+                    id: String(id),
+
+                    nickname:
+                        user.nickname ||
+                        user.displayId ||
+                        'ユーザー',
+
+                    displayId:
+                        user.displayId ||
+                        '',
+
+                    avatar:
+                        user.avatarThumb &&
+                        Array.isArray(
+                            user.avatarThumb
+                                .urlList
+                        ) &&
+                        user.avatarThumb
+                            .urlList
+                            .length
+                            ? user.avatarThumb
+                                .urlList[0]
+                            : ''
+                }
+            );
+        }
+    );
 
     updateViewerList();
 }
@@ -1010,55 +1761,71 @@ function updateViewerList() {
 
     list.empty();
 
-    viewers.forEach(viewer => {
+    viewers.forEach(
+        viewer => {
 
-        const item =
+            const item =
+                $('<div>')
+                    .addClass(
+                        'viewerItem'
+                    );
+
+            if (viewer.avatar) {
+
+                $('<img>')
+                    .attr(
+                        'src',
+                        viewer.avatar
+                    )
+                    .attr(
+                        'alt',
+                        ''
+                    )
+                    .appendTo(
+                        item
+                    );
+            }
+
+            const text =
+                $('<div>')
+                    .addClass(
+                        'viewerItemText'
+                    );
+
             $('<div>')
-                .addClass('viewerItem');
-
-        if (viewer.avatar) {
-
-            $('<img>')
-                .attr(
-                    'src',
-                    viewer.avatar
+                .addClass(
+                    'viewerItemNickname'
                 )
-                .attr(
-                    'alt',
-                    ''
+                .text(
+                    viewer.nickname
                 )
-                .appendTo(item);
+                .appendTo(
+                    text
+                );
+
+            $('<div>')
+                .addClass(
+                    'viewerItemId'
+                )
+                .text(
+                    viewer.displayId
+                        ? '@' +
+                          viewer.displayId
+                        : ''
+                )
+                .appendTo(
+                    text
+                );
+
+            item.append(
+                text
+            );
+
+            list.append(
+                item
+            );
         }
-
-        const text =
-            $('<div>')
-                .addClass('viewerItemText');
-
-        $('<div>')
-            .addClass(
-                'viewerItemNickname'
-            )
-            .text(
-                viewer.nickname
-            )
-            .appendTo(text);
-
-        $('<div>')
-            .addClass(
-                'viewerItemId'
-            )
-            .text(
-                viewer.displayId
-                    ? '@' +
-                      viewer.displayId
-                    : ''
-            )
-            .appendTo(text);
-
-        item.append(text);
-
-        list.append(item);
-    });
+    );
 
     $('#viewerCountText').text(
         '視聴者数: ' +
@@ -1070,20 +1837,28 @@ function updateViewerList() {
 function openViewerMenu() {
 
     $('#viewerSideMenu')
-        .addClass('open');
+        .addClass(
+            'open'
+        );
 
     $('#viewerMenuOverlay')
-        .addClass('open');
+        .addClass(
+            'open'
+        );
 }
 
 
 function closeViewerMenu() {
 
     $('#viewerSideMenu')
-        .removeClass('open');
+        .removeClass(
+            'open'
+        );
 
     $('#viewerMenuOverlay')
-        .removeClass('open');
+        .removeClass(
+            'open'
+        );
 }
 
 
@@ -1091,21 +1866,27 @@ function closeViewerMenu() {
    ROOM USER
 ========================================================= */
 
-connection.on('roomUser', (msg) => {
+connection.on(
+    'roomUser',
+    (msg) => {
 
-    if (
-        msg &&
-        typeof msg.viewerCount === 'number'
-    ) {
+        if (
+            msg &&
+            typeof msg.viewerCount ===
+            'number'
+        ) {
 
-        viewerCount =
-            msg.viewerCount;
+            viewerCount =
+                msg.viewerCount;
 
-        updateRoomStats();
+            updateRoomStats();
+        }
+
+        updateViewersFromRoomUser(
+            msg
+        );
     }
-
-    updateViewersFromRoomUser(msg);
-});
+);
 
 
 /* =========================================================
@@ -1114,237 +1895,307 @@ connection.on('roomUser', (msg) => {
 
 let joinMsgDelay = 0;
 
-connection.on('member', (msg) => {
+connection.on(
+    'member',
+    (msg) => {
 
-    if (
-        window.settings.showJoins === "0"
-    ) {
-        return;
-    }
+        if (
+            window.settings.showJoins ===
+            "0"
+        ) {
 
-    const addDelay = 250;
+            return;
+        }
 
-    let actualDelay =
-        addDelay;
+        const addDelay =
+            250;
 
-    if (joinMsgDelay > 500) {
-        actualDelay = 100;
-    }
+        let actualDelay =
+            addDelay;
 
-    if (joinMsgDelay > 1000) {
-        actualDelay = 0;
-    }
+        if (
+            joinMsgDelay >
+            500
+        ) {
 
-    joinMsgDelay += actualDelay;
+            actualDelay =
+                100;
+        }
 
-    setTimeout(() => {
+        if (
+            joinMsgDelay >
+            1000
+        ) {
 
-        joinMsgDelay -= actualDelay;
+            actualDelay =
+                0;
+        }
 
-        addChatItem(
-            '#21b2c2',
-            msg,
-            '参加しました',
-            true
+        joinMsgDelay +=
+            actualDelay;
+
+        setTimeout(
+            () => {
+
+                joinMsgDelay -=
+                    actualDelay;
+
+                addChatItem(
+                    '#21b2c2',
+                    msg,
+                    '参加しました',
+                    true
+                );
+
+            },
+            joinMsgDelay
         );
-
-    }, joinMsgDelay);
-});
+    }
+);
 
 
 /* =========================================================
    CHAT EVENT
 ========================================================= */
 
-connection.on('chat', (msg) => {
+connection.on(
+    'chat',
+    (msg) => {
 
-    if (
-        window.settings.showChats === "0"
-    ) {
-        return;
+        if (
+            window.settings.showChats ===
+            "0"
+        ) {
+
+            return;
+        }
+
+        if (
+            isDuplicateComment(msg)
+        ) {
+
+            return;
+        }
+
+        /*
+         * いいね抑制は
+         * 実際の通常コメントが来た
+         * ときだけ解除する。
+         */
+        likeMessageDisplayed =
+            false;
+
+        const comment =
+            msg.comment ||
+            msg.content ||
+            '';
+
+        addChatItem(
+            '',
+            msg,
+            comment
+        );
     }
-
-    if (isDuplicateComment(msg)) {
-        return;
-    }
-
-    /*
-     * いいね抑制は「実際の通常コメント」
-     * が来たときだけ解除する。
-     *
-     * member / social / join は解除しない。
-     */
-    likeMessageDisplayed = false;
-
-    const comment =
-        msg.comment ||
-        msg.content ||
-        '';
-
-    addChatItem(
-        '',
-        msg,
-        comment
-    );
-});
+);
 
 
 /* =========================================================
    GIFT EVENT
 ========================================================= */
 
-connection.on('gift', (data) => {
+connection.on(
+    'gift',
+    (data) => {
 
-    if (
-        !isPendingStreak(data) &&
-        Number(data.diamondCount || 0) > 0
-    ) {
-
-        diamondsCount +=
+        if (
+            !isPendingStreak(data) &&
             Number(
-                data.diamondCount || 0
-            ) *
-            Number(
-                data.repeatCount || 1
-            );
+                data.diamondCount ||
+                0
+            ) > 0
+        ) {
 
-        updateRoomStats();
+            diamondsCount +=
+                Number(
+                    data.diamondCount ||
+                    0
+                ) *
+                Number(
+                    data.repeatCount ||
+                    1
+                );
+
+            updateRoomStats();
+        }
+
+        if (
+            window.settings.showGifts ===
+            "0"
+        ) {
+
+            return;
+        }
+
+        addGiftItem(
+            data
+        );
+
+        /*
+         * 実際のgiftイベントを
+         * 受信したときだけ再生。
+         *
+         * 再生中でも別Audioを使うため
+         * 音が重なって再生される。
+         */
+        playGiftSound();
     }
-
-    if (
-        window.settings.showGifts === "0"
-    ) {
-        return;
-    }
-
-    addGiftItem(data);
-
-    /*
-     * 実際のgiftイベントを受け取ったときだけ
-     * 音を鳴らす。
-     */
-    playGiftSound();
-});
+);
 
 
 /* =========================================================
    SOCIAL
 ========================================================= */
 
-connection.on('social', (data) => {
+connection.on(
+    'social',
+    (data) => {
 
-    if (
-        window.settings.showFollows === "0"
-    ) {
-        return;
-    }
+        if (
+            window.settings.showFollows ===
+            "0"
+        ) {
 
-    let color =
-        '#2fb816';
+            return;
+        }
 
-    if (
-        data.displayType &&
-        data.displayType.includes('follow')
-    ) {
-        color = '#ff005e';
-    }
+        let color =
+            '#2fb816';
 
-    let label =
-        data.label ||
-        '';
+        if (
+            data.displayType &&
+            data.displayType.includes(
+                'follow'
+            )
+        ) {
 
-    label =
-        label.replace(
-            '{0:user}',
-            ''
+            color =
+                '#ff005e';
+        }
+
+        let label =
+            data.label ||
+            '';
+
+        label =
+            label.replace(
+                '{0:user}',
+                ''
+            );
+
+        addChatItem(
+            color,
+            data,
+            label
         );
-
-    addChatItem(
-        color,
-        data,
-        label
-    );
-});
+    }
+);
 
 
 /* =========================================================
    LIKE
 ========================================================= */
 
-connection.on('like', (data) => {
+connection.on(
+    'like',
+    (data) => {
 
-    if (
-        window.settings.showLikes === "0"
-    ) {
-        return;
+        if (
+            window.settings.showLikes ===
+            "0"
+        ) {
+
+            return;
+        }
+
+        if (
+            data &&
+            typeof data.likeCount ===
+            'number'
+        ) {
+
+            likeCount =
+                data.likeCount;
+
+        } else if (
+            data &&
+            typeof data.likeCountDelta ===
+            'number'
+        ) {
+
+            likeCount +=
+                data.likeCountDelta;
+
+        } else {
+
+            likeCount++;
+        }
+
+        updateRoomStats();
+
+        /*
+         * 最初のいいねを表示。
+         *
+         * member / social / 参加しました
+         * では解除しない。
+         *
+         * 通常のchatが来たら解除される。
+         */
+        if (
+            likeMessageDisplayed
+        ) {
+
+            return;
+        }
+
+        likeMessageDisplayed =
+            true;
+
+        const messageData =
+            data || {};
+
+        addChatItem(
+            '#ff6688',
+            messageData,
+            'ライブにいいねされました'
+        );
     }
-
-    if (
-        data &&
-        typeof data.likeCount === 'number'
-    ) {
-
-        likeCount =
-            data.likeCount;
-
-    } else if (
-        data &&
-        typeof data.likeCountDelta === 'number'
-    ) {
-
-        likeCount +=
-            data.likeCountDelta;
-
-    } else {
-
-        likeCount++;
-    }
-
-    updateRoomStats();
-
-    /*
-     * 最初のいいねを表示。
-     *
-     * その後、
-     * - member
-     * - social
-     * - 参加しました
-     *
-     * だけなら再表示しない。
-     *
-     * 通常のchatが来たら
-     * app.jsのchatイベントで解除される。
-     */
-    if (likeMessageDisplayed) {
-        return;
-    }
-
-    likeMessageDisplayed = true;
-
-    const messageData = data || {};
-
-    addChatItem(
-        '#ff6688',
-        messageData,
-        'ライブにいいねされました'
-    );
-});
+);
 
 
 /* =========================================================
    STREAM END
 ========================================================= */
 
-connection.on('streamEnd', () => {
+connection.on(
+    'streamEnd',
+    () => {
 
-    $('#stateText').text(
-        '配信は終了しました。'
-    );
+        $('#stateText').text(
+            '配信は終了しました。'
+        );
 
-    if (window.settings.username) {
+        if (
+            window.settings.username
+        ) {
 
-        setTimeout(() => {
-            connect();
-        }, 30000);
+            setTimeout(
+                () => {
+
+                    connect();
+
+                },
+                30000
+            );
+        }
     }
-});
+);
