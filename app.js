@@ -24,10 +24,36 @@ let giftAudioUnlocked = false;
 
 let giftAudioEnabled = true;
 
-let giftAudioUrl = './gift.mp3';
+let giftAudioUrl = './tegami.mp3';
+
+let rareGiftAudioUrl = './sakibare.mp3';
 
 const giftAudioPool = [];
 const GIFT_AUDIO_POOL_SIZE = 8;
+
+
+/* =========================================================
+   GIFT DUPLICATE
+========================================================= */
+
+const GIFT_DUPLICATE_WINDOW = 5000;
+
+const recentGifts = new Map();
+
+const activeGiftStreaks = new Set();
+
+
+/* =========================================================
+   GIFT INITIAL LOAD
+========================================================= */
+
+let giftInitialLoading = false;
+
+let giftSoundReady = false;
+
+let giftInitialTimer = null;
+
+const GIFT_INITIAL_LOAD_WAIT = 1500;
 
 
 /* =========================================================
@@ -135,16 +161,10 @@ function loadUrlSettings() {
             ).trim();
 
         if (!giftAudioUrl) {
-            giftAudioUrl = './gift.mp3';
+            giftAudioUrl = './tegami.mp3';
         }
     }
 
-    /*
-     * giftMute
-     *
-     * 0 = ON
-     * 1 = OFF
-     */
     if (
         window.settings.giftMute === '1'
     ) {
@@ -486,6 +506,22 @@ $(document).ready(() => {
 
 function connect() {
 
+    recentGifts.clear();
+
+    activeGiftStreaks.clear();
+
+    giftInitialLoading = true;
+    giftSoundReady = false;
+
+    if (giftInitialTimer) {
+
+        clearTimeout(
+            giftInitialTimer
+        );
+
+        giftInitialTimer = null;
+    }
+
     let uniqueId =
         window.settings.username ||
         $('#uniqueIdInput').val();
@@ -517,10 +553,36 @@ function connect() {
 
             viewerMap.clear();
 
+            recentGifts.clear();
+            activeGiftStreaks.clear();
+
             updateRoomStats();
             updateViewerList();
 
+            giftInitialTimer =
+                setTimeout(
+                    function () {
+
+                        giftInitialLoading =
+                            false;
+
+                        giftSoundReady =
+                            true;
+
+                        giftInitialTimer =
+                            null;
+
+                    },
+                    GIFT_INITIAL_LOAD_WAIT
+                );
+
         }).catch(errorMessage => {
+
+            giftInitialLoading =
+                false;
+
+            giftSoundReady =
+                false;
 
             $('#stateText').text(
                 String(errorMessage)
@@ -537,6 +599,12 @@ function connect() {
         });
 
     } else {
+
+        giftInitialLoading =
+            false;
+
+        giftSoundReady =
+            false;
 
         alert(
             'ユーザーIDを入力してください。'
@@ -999,17 +1067,101 @@ function isPendingStreak(data) {
 }
 
 
-/*
- * ギフト音を複数個あらかじめ用意する。
- *
- * これにより、
- *
- * gift 1 → 再生中
- * gift 2 → 別Audioで再生
- * gift 3 → 別Audioで再生
- *
- * のように重ねて再生できる。
- */
+function getGiftDuplicateKey(data) {
+
+    const userId =
+        data &&
+        (
+            data.userId ||
+            (
+                data.user &&
+                (
+                    data.user.id ||
+                    data.user.idStr
+                )
+            )
+        );
+
+    const giftId =
+        data &&
+        (
+            data.giftId ||
+            data.giftName ||
+            ''
+        );
+
+    if (
+        !userId &&
+        !giftId
+    ) {
+
+        return null;
+    }
+
+    return (
+        String(userId || '') +
+        '_' +
+        String(giftId || '')
+    );
+}
+
+
+function isDuplicateGift(data) {
+
+    const key =
+        getGiftDuplicateKey(data);
+
+    if (!key) {
+        return false;
+    }
+
+    const now =
+        Date.now();
+
+    for (
+        const [
+            oldKey,
+            timestamp
+        ]
+        of recentGifts.entries()
+    ) {
+
+        if (
+            now - timestamp >
+            GIFT_DUPLICATE_WINDOW
+        ) {
+
+            recentGifts.delete(
+                oldKey
+            );
+        }
+    }
+
+    if (
+        recentGifts.has(key)
+    ) {
+
+        recentGifts.set(
+            key,
+            now
+        );
+
+        return true;
+    }
+
+    recentGifts.set(
+        key,
+        now
+    );
+
+    return false;
+}
+
+
+/* =========================================================
+   GIFT AUDIO POOL
+========================================================= */
+
 function prepareGiftAudioPool() {
 
     if (
@@ -1036,14 +1188,14 @@ function prepareGiftAudioPool() {
         audio.volume =
             1.0;
 
+        audio._giftSoundUrl =
+            giftAudioUrl;
+
         giftAudioPool.push(
             audio
         );
     }
 
-    /*
-     * 従来の変数も維持
-     */
     if (
         !giftAudio &&
         giftAudioPool.length > 0
@@ -1055,14 +1207,6 @@ function prepareGiftAudioPool() {
 }
 
 
-/*
- * Connectボタンを押したときだけ
- * 無音でAudioを再生して、
- * iPhone等のブラウザ側の
- * Audio再生許可を取得する。
- *
- * ここでは絶対に音を鳴らさない。
- */
 function unlockGiftAudio() {
 
     if (
@@ -1076,21 +1220,66 @@ function unlockGiftAudio() {
 
         prepareGiftAudioPool();
 
-        const audio =
-            giftAudioPool[0];
-
-        audio.muted =
-            true;
-
-        audio.currentTime =
+        let unlockIndex =
             0;
 
-        const promise =
-            audio.play();
+        function unlockNext() {
 
-        if (promise) {
+            if (
+                unlockIndex >=
+                giftAudioPool.length
+            ) {
 
-            promise.then(() => {
+                giftAudioUnlocked =
+                    true;
+
+                return;
+            }
+
+            const audio =
+                giftAudioPool[
+                    unlockIndex
+                ];
+
+            unlockIndex++;
+
+            audio.muted =
+                true;
+
+            audio.currentTime =
+                0;
+
+            const promise =
+                audio.play();
+
+            if (promise) {
+
+                promise.then(() => {
+
+                    audio.pause();
+
+                    audio.currentTime =
+                        0;
+
+                    audio.muted =
+                        false;
+
+                    unlockNext();
+
+                }).catch(error => {
+
+                    audio.muted =
+                        false;
+
+                    console.warn(
+                        'Gift audio unlock failed:',
+                        error
+                    );
+
+                    unlockNext();
+                });
+
+            } else {
 
                 audio.pause();
 
@@ -1100,20 +1289,11 @@ function unlockGiftAudio() {
                 audio.muted =
                     false;
 
-                giftAudioUnlocked =
-                    true;
-
-            }).catch(error => {
-
-                audio.muted =
-                    false;
-
-                console.warn(
-                    'Gift audio unlock failed:',
-                    error
-                );
-            });
+                unlockNext();
+            }
         }
+
+        unlockNext();
 
     } catch (e) {
 
@@ -1125,16 +1305,17 @@ function unlockGiftAudio() {
 }
 
 
-/*
- * 実際のギフト受信時だけ呼ばれる。
- *
- * 再生中のAudioを探して止めることはしない。
- * 空いているAudioを使用するため、
- * 複数のgift.mp3が同時再生できる。
- */
+/* =========================================================
+   PLAY GIFT SOUND
+========================================================= */
+
 function playGiftSound() {
 
     if (!giftAudioEnabled) {
+        return;
+    }
+
+    if (!giftSoundReady) {
         return;
     }
 
@@ -1142,12 +1323,35 @@ function playGiftSound() {
 
         prepareGiftAudioPool();
 
+        /*
+         * 1～50
+         *
+         * 1      → durandal
+         * 2～50  → tegami
+         */
+        const random =
+            Math.floor(
+                Math.random() * 50
+            ) + 1;
+
+        let soundUrl;
+
+        if (
+            random === 1
+        ) {
+
+            soundUrl =
+                rareGiftAudioUrl;
+
+        } else {
+
+            soundUrl =
+                giftAudioUrl;
+        }
+
         let audio =
             null;
 
-        /*
-         * 再生していないAudioを探す。
-         */
         for (
             let i = 0;
             i < giftAudioPool.length;
@@ -1156,6 +1360,14 @@ function playGiftSound() {
 
             const candidate =
                 giftAudioPool[i];
+
+            if (
+                candidate._giftSoundUrl !==
+                soundUrl
+            ) {
+
+                continue;
+            }
 
             if (
                 candidate.paused ||
@@ -1169,15 +1381,11 @@ function playGiftSound() {
             }
         }
 
-        /*
-         * 全部使用中なら、
-         * 新しいAudioを追加する。
-         */
         if (!audio) {
 
             audio =
                 new Audio(
-                    giftAudioUrl
+                    soundUrl
                 );
 
             audio.preload =
@@ -1186,19 +1394,37 @@ function playGiftSound() {
             audio.volume =
                 1.0;
 
+            audio._giftSoundUrl =
+                soundUrl;
+
             giftAudioPool.push(
                 audio
             );
         }
 
-        /*
-         * このAudio自身が前回の再生を
-         * 終えている場合だけ先頭から再生。
-         */
+        if (
+            audio._giftSoundUrl !==
+            soundUrl
+        ) {
+
+            audio.src =
+                soundUrl;
+
+            audio._giftSoundUrl =
+                soundUrl;
+
+            audio.load();
+        }
+
         if (
             audio.ended ||
-            audio.currentTime >=
-            audio.duration
+            (
+                Number.isFinite(
+                    audio.duration
+                ) &&
+                audio.currentTime >=
+                audio.duration
+            )
         ) {
 
             audio.currentTime =
@@ -1248,6 +1474,10 @@ function formatGiftTime() {
 }
 
 
+/* =========================================================
+   ADD GIFT ITEM
+========================================================= */
+
 function addGiftItem(data) {
 
     let container =
@@ -1281,12 +1511,14 @@ function addGiftItem(data) {
         '';
 
     const streakId =
-        String(userId) +
-        '_' +
-        String(giftId);
-
-    const pending =
-        isPendingStreak(data);
+        getGiftDuplicateKey(
+            data
+        ) ||
+        (
+            String(userId) +
+            '_' +
+            String(giftId)
+        );
 
     const giftName =
         data.giftName ||
@@ -1372,12 +1604,6 @@ function addGiftItem(data) {
             'loading="lazy">';
     }
 
-    /*
-     * ギフト表示名だけ nickname を使用。
-     *
-     * displayId はここでは表示に使わない。
-     * 直リンクや接続処理には影響しない。
-     */
     const giftNickname =
         data.nickname ||
         (
@@ -1389,11 +1615,7 @@ function addGiftItem(data) {
     const html =
         '<div ' +
         'data-streakid="' +
-        sanitize(
-            pending
-                ? streakId
-                : ''
-        ) +
+        sanitize(streakId) +
         '">' +
 
             '<div style="' +
@@ -1506,8 +1728,10 @@ function addGiftItem(data) {
                 }
             );
 
+    /*
+     * 既存ギフトなら更新。
+     */
     if (
-        pending &&
         existing.length
     ) {
 
@@ -1516,23 +1740,175 @@ function addGiftItem(data) {
                 html
             );
 
-    } else {
+        /*
+         * 更新された場合も、
+         * 必ずギフト欄の最下部へ。
+         */
+        scrollGiftToBottom();
 
-        container.append(
-            html
-        );
+        return {
+            added: false,
+            element:
+                container
+                    .find(
+                        '[data-streakid="' +
+                        CSS.escape(
+                            streakId
+                        ) +
+                        '"]'
+                    )
+                    .last()
+        };
     }
 
-    container.stop();
-
-    container.animate(
-        {
-            scrollTop:
-                container[0]
-                    .scrollHeight
-        },
-        400
+    /*
+     * 新規ギフト。
+     */
+    container.append(
+        html
     );
+
+    const newElement =
+        container
+            .find(
+                '[data-streakid]'
+            )
+            .last();
+
+    /*
+     * 新規追加直後に最下部へ。
+     */
+    scrollGiftToBottom();
+
+    /*
+     * DOM反映後にも再度最下部へ。
+     */
+    requestAnimationFrame(
+        function () {
+
+            scrollGiftToBottom();
+        }
+    );
+
+    return {
+        added: true,
+        element: newElement
+    };
+}
+
+
+/* =========================================================
+   GIFT SCROLL
+========================================================= */
+
+/*
+ * ギフト欄そのものを必ず一番下へ移動する。
+ *
+ * offsetTopなどの要素位置計算は使用しない。
+ * stickyヘッダーや画像読み込みで位置がズレるため、
+ * scrollHeightだけを基準にする。
+ */
+function scrollGiftToBottom() {
+
+    const container =
+        location.href.includes(
+            'obs.html'
+        )
+            ? $('.eventcontainer')
+            : $('.giftcontainer');
+
+    if (
+        !container.length
+    ) {
+
+        return;
+    }
+
+    const element =
+        container[0];
+
+    function forceScroll() {
+
+        if (!element) {
+            return;
+        }
+
+        element.scrollTop =
+            element.scrollHeight;
+    }
+
+    /*
+     * 即時
+     */
+    forceScroll();
+
+    /*
+     * ブラウザがDOMを反映した後
+     */
+    requestAnimationFrame(
+        function () {
+
+            forceScroll();
+
+            requestAnimationFrame(
+                function () {
+
+                    forceScroll();
+                }
+            );
+        }
+    );
+
+    /*
+     * 画像・レイアウト反映後
+     */
+    setTimeout(
+        function () {
+
+            forceScroll();
+
+        },
+        30
+    );
+
+    setTimeout(
+        function () {
+
+            forceScroll();
+
+        },
+        80
+    );
+
+    setTimeout(
+        function () {
+
+            forceScroll();
+
+        },
+        150
+    );
+
+    setTimeout(
+        function () {
+
+            forceScroll();
+
+        },
+        300
+    );
+}
+
+
+/*
+ * 互換用。
+ *
+ * 既存コードから呼ばれても、
+ * 常にギフト欄の一番下へ移動する。
+ */
+function scrollGiftToElement(element) {
+
+    scrollGiftToBottom();
 }
 
 
@@ -1589,14 +1965,6 @@ function addChatItem(
             'loading="lazy">';
     }
 
-    /*
-     * チャット表示名だけ nickname を使用。
-     *
-     * displayId は generateUsernameLink()
-     * 内で使用しており、
-     * TikTokプロフィールへのリンクや
-     * 直リンク・接続処理には影響させない。
-     */
     const chatNickname =
         data.nickname ||
         (
@@ -1636,12 +2004,6 @@ function addChatItem(
         '</div>'
     );
 
-    /*
-     * 通常のチャットだけ
-     * 自動スクロール設定に従う。
-     *
-     * OBSのeventcontainerは従来通り。
-     */
     if (
         container.hasClass(
             'chatcontainer'
@@ -1977,11 +2339,6 @@ connection.on(
             return;
         }
 
-        /*
-         * いいね抑制は
-         * 実際の通常コメントが来た
-         * ときだけ解除する。
-         */
         likeMessageDisplayed =
             false;
 
@@ -2036,18 +2393,85 @@ connection.on(
             return;
         }
 
-        addGiftItem(
-            data
-        );
+        const duplicate =
+            isDuplicateGift(
+                data
+            );
 
         /*
-         * 実際のgiftイベントを
-         * 受信したときだけ再生。
+         * 重複イベント。
          *
-         * 再生中でも別Audioを使うため
-         * 音が重なって再生される。
+         * 表示更新のみ。
+         * 音は鳴らさない。
          */
-        playGiftSound();
+        if (
+            duplicate
+        ) {
+
+            addGiftItem(
+                data
+            );
+
+            if (
+                data &&
+                data.repeatEnd
+            ) {
+
+                const streakKey =
+                    getGiftDuplicateKey(
+                        data
+                    );
+
+                if (streakKey) {
+
+                    activeGiftStreaks.delete(
+                        streakKey
+                    );
+                }
+            }
+
+            return;
+        }
+
+        const streakKey =
+            getGiftDuplicateKey(
+                data
+            );
+
+        /*
+         * 先にギフトを実際にDOMへ追加。
+         */
+        const result =
+            addGiftItem(
+                data
+            );
+
+        /*
+         * 新規カードとして追加された場合だけ音を鳴らす。
+         */
+        if (
+            result &&
+            result.added &&
+            giftSoundReady
+        ) {
+
+            requestAnimationFrame(
+                function () {
+
+                    playGiftSound();
+                }
+            );
+        }
+
+        if (
+            data &&
+            data.repeatEnd
+        ) {
+
+            activeGiftStreaks.delete(
+                streakKey
+            );
+        }
     }
 );
 
@@ -2142,14 +2566,6 @@ connection.on(
 
         updateRoomStats();
 
-        /*
-         * 最初のいいねを表示。
-         *
-         * member / social / 参加しました
-         * では解除しない。
-         *
-         * 通常のchatが来たら解除される。
-         */
         if (
             likeMessageDisplayed
         ) {
@@ -2183,6 +2599,12 @@ connection.on(
         $('#stateText').text(
             '配信は終了しました。'
         );
+
+        giftInitialLoading =
+            false;
+
+        giftSoundReady =
+            false;
 
         if (
             window.settings.username
