@@ -1,8 +1,6 @@
-// This will use the demo backend if you open index.html locally via file://,
-// otherwise your server will be used
-let backendUrl = location.protocol === 'file:' ?
-  "https://tiktok-chat-reader.zerody.one/" :
-  undefined;
+// TikTok LIVE backend
+// GitHub Pagesから利用するため、sacrifice-nico.comのSocket.IOサーバーへ接続する
+let backendUrl = "https://sacrifice-nico.com/";
 
 let connection = new TikTokIOConnection(backendUrl);
 
@@ -24,6 +22,7 @@ $(document).ready(() => {
   });
   
   if (window.settings.username) {
+    $('#uniqueIdInput').val(window.settings.username);
     connect();
   }
 });
@@ -40,7 +39,6 @@ function connect() {
     }).then(state => {
       $('#stateText').text(`ルームID ${state.roomId} に接続`);
       
-      // reset stats
       viewerCount = 0;
       likeCount = 0;
       diamondsCount = 0;
@@ -50,10 +48,9 @@ function connect() {
     }).catch(errorMessage => {
       $('#stateText').text(errorMessage);
       
-      // schedule next try if obs username set
       if (window.settings.username) {
         setTimeout(() => {
-          connect(window.settings.username);
+          connect();
         }, 30000);
       }
     });
@@ -84,9 +81,6 @@ function isPendingStreak(data) {
   return data.giftType === 1 && !data.repeatEnd;
 }
 
-/**
- * Add a new message to the chat container
- */
 function addChatItem(color, data, text, summarize) {
   let container = location.href.includes('obs.html') ?
     $('.eventcontainer') :
@@ -115,9 +109,6 @@ function addChatItem(color, data, text, summarize) {
   }, 400);
 }
 
-/**
- * Add a new gift to the gift container
- */
 function addGiftItem(data) {
   let container = location.href.includes('obs.html') ?
     $('.eventcontainer') :
@@ -161,7 +152,8 @@ function addGiftItem(data) {
         </div>
     `;
   
-  let existingStreakItem = container.find(`[data-streakid='${streakId}']`);
+  let existingStreakItem =
+    container.find(`[data-streakid='${streakId}']`);
   
   if (existingStreakItem.length) {
     existingStreakItem.replaceWith(html);
@@ -273,10 +265,9 @@ connection.on('social', (data) => {
 connection.on('streamEnd', () => {
   $('#stateText').text('配信は終了しました。');
   
-  // schedule next try if obs username set
   if (window.settings.username) {
     setTimeout(() => {
-      connect(window.settings.username);
+      connect();
     }, 30000);
   }
 });
