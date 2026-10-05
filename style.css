@@ -187,6 +187,17 @@ main {
 .giftcontainer {
     display: flex;
     flex-direction: column;
+
+    /* ギフト欄だけ独立してスクロール */
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /* iPhone / iPadでの慣性スクロール */
+    -webkit-overflow-scrolling: touch;
+
+    /* スクロール領域を確実に確保 */
+    min-height: 0;
+    max-height: 100%;
 }
 
 .containerheader {
@@ -450,6 +461,7 @@ main {
 
     .giftcontainer {
         min-height: 130px;
+        max-height: 100%;
     }
 
     .giftcontainer > div {

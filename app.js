@@ -1172,12 +1172,6 @@ connection.on('chat', (msg) => {
         return;
     }
 
-    /*
-     * いいね抑制は「実際の通常コメント」
-     * が来たときだけ解除する。
-     *
-     * member / social / join は解除しない。
-     */
     likeMessageDisplayed = false;
 
     const comment =
@@ -1223,10 +1217,6 @@ connection.on('gift', (data) => {
 
     addGiftItem(data);
 
-    /*
-     * 実際のgiftイベントを受け取ったときだけ
-     * 音を鳴らす。
-     */
     playGiftSound();
 });
 
@@ -1306,19 +1296,6 @@ connection.on('like', (data) => {
 
     updateRoomStats();
 
-    /*
-     * 最初のいいねを表示。
-     *
-     * その後、
-     * - member
-     * - social
-     * - 参加しました
-     *
-     * だけなら再表示しない。
-     *
-     * 通常のchatが来たら
-     * app.jsのchatイベントで解除される。
-     */
     if (likeMessageDisplayed) {
         return;
     }
