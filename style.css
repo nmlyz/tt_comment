@@ -777,3 +777,14 @@ main {
         line-height: 24px;
     }
 }
+.giftcontainer {
+    position: relative;
+}
+
+.giftcontainer .containerheader {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #2a292f !important;
+    box-shadow: 0 0 0 2px #2a292f;
+}
