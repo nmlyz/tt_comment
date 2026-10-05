@@ -48,8 +48,14 @@ let giftAudioUrl =
     NORMAL_GIFT_AUDIO_URL;
 
 
+/*
+ * 初期状態はミュート。
+ *
+ * giftMute=0 がURLに指定された場合のみ
+ * loadUrlSettings()でONになる。
+ */
 let giftAudioEnabled =
-    true;
+    false;
 
 
 let giftAudioUnlocked =
@@ -63,12 +69,47 @@ let audioInteractionUnlocked =
     false;
 
 
+/*
+ * 現在再生中のギフト音声。
+ *
+ * 最大3個まで。
+ */
 const activeGiftAudios =
     new Set();
 
 
 const MAX_ACTIVE_GIFT_AUDIOS =
+    3;
+
+
+/*
+ * ギフト音声待機キュー。
+ */
+const giftAudioQueue =
+    [];
+
+
+/*
+ * ギフト音声の開始間隔。
+ *
+ * 0.1秒 = 100ms
+ */
+const GIFT_AUDIO_START_INTERVAL =
     100;
+
+
+/*
+ * 次に音声を開始できる予定時刻。
+ */
+let nextGiftAudioStartTime =
+    0;
+
+
+/*
+ * キュー処理中かどうか。
+ */
+let giftAudioQueueProcessing =
+    false;
 
 
 /* =========================================================
@@ -101,6 +142,13 @@ let bgmSourceNode =
 
 let bgmGainNode =
     null;
+
+
+/*
+ * BGM再生速度は常に1.0倍。
+ */
+const BGM_PLAYBACK_RATE =
+    1.0;
 
 
 /* =========================================================
@@ -257,6 +305,13 @@ function loadUrlSettings() {
     }
 
 
+    /*
+     * giftMuteが指定されている場合のみ
+     * URL設定を優先する。
+     *
+     * 指定なし:
+     * 初期ミュート
+     */
     if (
         window.settings.giftMute === '1'
     ) {
@@ -638,6 +693,70 @@ function getBgmAudioContext() {
 
 
 /* =========================================================
+   BGM PLAYBACK RATE LOCK
+========================================================= */
+
+function lockBgmPlaybackRate() {
+
+    if (
+        !bgmAudio
+    ) {
+
+        return;
+    }
+
+
+    try {
+
+        bgmAudio.defaultPlaybackRate =
+            BGM_PLAYBACK_RATE;
+
+
+        bgmAudio.playbackRate =
+            BGM_PLAYBACK_RATE;
+
+    } catch (e) {
+
+        console.warn(
+            '[DEBUG] BGM playbackRate lock error:',
+            e
+        );
+    }
+}
+
+
+function setupBgmPlaybackRateLock() {
+
+    if (
+        !bgmAudio
+    ) {
+
+        return;
+    }
+
+
+    bgmAudio.defaultPlaybackRate =
+        BGM_PLAYBACK_RATE;
+
+
+    bgmAudio.playbackRate =
+        BGM_PLAYBACK_RATE;
+
+
+    bgmAudio.removeEventListener(
+        'ratechange',
+        lockBgmPlaybackRate
+    );
+
+
+    bgmAudio.addEventListener(
+        'ratechange',
+        lockBgmPlaybackRate
+    );
+}
+
+
+/* =========================================================
    BGM PLAY
 ========================================================= */
 
@@ -710,6 +829,9 @@ async function startBgm() {
                 1.0;
 
 
+            setupBgmPlaybackRateLock();
+
+
             bgmAudio.addEventListener(
                 'error',
                 function (error) {
@@ -721,6 +843,10 @@ async function startBgm() {
                     );
                 }
             );
+
+        } else {
+
+            lockBgmPlaybackRate();
         }
 
 
@@ -762,6 +888,9 @@ async function startBgm() {
             !bgmAudio.paused
         ) {
 
+            lockBgmPlaybackRate();
+
+
             console.log(
                 '[DEBUG] BGM already playing'
             );
@@ -770,7 +899,13 @@ async function startBgm() {
         }
 
 
+        lockBgmPlaybackRate();
+
+
         await bgmAudio.play();
+
+
+        lockBgmPlaybackRate();
 
 
         console.log(
@@ -818,6 +953,9 @@ async function startBgmFallback() {
                 BGM_GAIN;
 
 
+            setupBgmPlaybackRateLock();
+
+
             bgmAudio.addEventListener(
                 'error',
                 function (error) {
@@ -829,6 +967,10 @@ async function startBgmFallback() {
                     );
                 }
             );
+
+        } else {
+
+            lockBgmPlaybackRate();
         }
 
 
@@ -836,11 +978,19 @@ async function startBgmFallback() {
             !bgmAudio.paused
         ) {
 
+            lockBgmPlaybackRate();
+
             return;
         }
 
 
+        lockBgmPlaybackRate();
+
+
         await bgmAudio.play();
+
+
+        lockBgmPlaybackRate();
 
 
         console.log(
@@ -875,6 +1025,9 @@ function stopBgm() {
     try {
 
         bgmAudio.pause();
+
+
+        lockBgmPlaybackRate();
 
     } catch (e) {
 
@@ -1678,9 +1831,6 @@ function generateDisplayName(data) {
     }
 
 
-    /*
-     * 最優先はイベント自身のnickname。
-     */
     if (
         data.nickname
     ) {
@@ -1691,9 +1841,6 @@ function generateDisplayName(data) {
     }
 
 
-    /*
-     * user.nicknameがある場合。
-     */
     if (
         data.user &&
         data.user.nickname
@@ -1705,12 +1852,6 @@ function generateDisplayName(data) {
     }
 
 
-    /*
-     * 最後のフォールバック。
-     *
-     * 通常のチャット・ギフトでは
-     * ここに来ない。
-     */
     return 'ユーザー';
 }
 
@@ -1990,6 +2131,10 @@ async function unlockGiftAudio() {
                 'auto';
 
 
+            /*
+             * アンロック確認中は
+             * 絶対に音を出さない。
+             */
             audio.muted =
                 true;
 
@@ -2008,6 +2153,11 @@ async function unlockGiftAudio() {
             }
 
 
+            /*
+             * 再生許可だけ取得。
+             *
+             * ミュート解除は絶対にしない。
+             */
             audio.pause();
 
 
@@ -2021,11 +2171,27 @@ async function unlockGiftAudio() {
 
 
             audio.muted =
-                false;
+                true;
 
 
             audio.volume =
-                1.0;
+                0;
+
+
+            /*
+             * アンロック確認専用Audioは
+             * ここで完全に破棄する。
+             */
+            audio.src =
+                '';
+
+
+            try {
+
+                audio.load();
+
+            } catch (e) {
+            }
 
 
             successCount++;
@@ -2050,7 +2216,7 @@ async function unlockGiftAudio() {
 
 
         console.log(
-            '[DEBUG] Gift audio unlocked:',
+            '[DEBUG] Gift audio unlocked silently:',
             successCount +
             '/' +
             uniqueUrls.length
@@ -2076,19 +2242,6 @@ async function unlockGiftAudio() {
 
 function selectGiftAudioUrl() {
 
-    /*
-     * 1回だけ乱数を引く。
-     *
-     * これが重要。
-     *
-     * 1個のギフトについて
-     * 必ず以下のどれか1つだけになる。
-     *
-     * tegami    = 1/30
-     * durandal  = 1/50
-     * dainsleif = 1/100
-     * normal    = 残り
-     */
     const random =
         Math.random();
 
@@ -2115,9 +2268,7 @@ function selectGiftAudioUrl() {
     /*
      * Durandal
      *
-     * 1/50
-     *
-     * Tegamiに該当しなかった場合だけ判定。
+     * Tegamiに該当しなかった場合だけ。
      */
     if (
         random <
@@ -2139,9 +2290,7 @@ function selectGiftAudioUrl() {
     /*
      * Dainsleif
      *
-     * 1/100
-     *
-     * 上2つに該当しなかった場合だけ判定。
+     * 上2つに該当しなかった場合だけ。
      */
     if (
         random <
@@ -2174,10 +2323,155 @@ function selectGiftAudioUrl() {
 
 
 /* =========================================================
-   GIFT AUDIO PLAY
+   GIFT AUDIO QUEUE
 ========================================================= */
 
-function playGiftSound() {
+function processGiftAudioQueue() {
+
+    if (
+        giftAudioQueueProcessing
+    ) {
+
+        return;
+    }
+
+
+    giftAudioQueueProcessing =
+        true;
+
+
+    try {
+
+        if (
+            !giftAudioEnabled
+        ) {
+
+            /*
+             * ミュート中は新しい音声を
+             * 再生待ちに残さない。
+             */
+            giftAudioQueue.length =
+                0;
+
+
+            return;
+        }
+
+
+        if (
+            !giftAudioUnlocked
+        ) {
+
+            return;
+        }
+
+
+        if (
+            giftAudioQueue.length ===
+            0
+        ) {
+
+            return;
+        }
+
+
+        if (
+            activeGiftAudios.size >=
+            MAX_ACTIVE_GIFT_AUDIOS
+        ) {
+
+            return;
+        }
+
+
+        const now =
+            Date.now();
+
+
+        let delay =
+            nextGiftAudioStartTime -
+            now;
+
+
+        if (
+            delay < 0
+        ) {
+
+            delay =
+                0;
+        }
+
+
+        const soundUrl =
+            giftAudioQueue.shift();
+
+
+        const scheduledStartTime =
+            Math.max(
+                now,
+                nextGiftAudioStartTime
+            );
+
+
+        nextGiftAudioStartTime =
+            scheduledStartTime +
+            GIFT_AUDIO_START_INTERVAL;
+
+
+        setTimeout(
+            function () {
+
+                if (
+                    !giftAudioEnabled
+                ) {
+
+                    giftAudioQueue.length =
+                        0;
+
+                    return;
+                }
+
+
+                if (
+                    activeGiftAudios.size >=
+                    MAX_ACTIVE_GIFT_AUDIOS
+                ) {
+
+                    giftAudioQueue.unshift(
+                        soundUrl
+                    );
+
+
+                    processGiftAudioQueue();
+
+                    return;
+                }
+
+
+                playQueuedGiftSound(
+                    soundUrl
+                );
+
+
+                processGiftAudioQueue();
+
+            },
+            delay
+        );
+
+    } finally {
+
+        giftAudioQueueProcessing =
+            false;
+    }
+}
+
+
+/* =========================================================
+   GIFT AUDIO QUEUED PLAY
+========================================================= */
+
+function playQueuedGiftSound(soundUrl) {
 
     if (
         !giftAudioEnabled
@@ -2191,8 +2485,17 @@ function playGiftSound() {
         !giftAudioUnlocked
     ) {
 
-        console.log(
-            '[DEBUG] Gift audio waiting for unlock'
+        return;
+    }
+
+
+    if (
+        activeGiftAudios.size >=
+        MAX_ACTIVE_GIFT_AUDIOS
+    ) {
+
+        giftAudioQueue.unshift(
+            soundUrl
         );
 
 
@@ -2200,20 +2503,11 @@ function playGiftSound() {
     }
 
 
-    const soundUrl =
-        selectGiftAudioUrl();
-
-
     let audio;
 
 
     try {
 
-        /*
-         * ギフトごとに新しいAudio。
-         *
-         * 前のギフト音を止めない。
-         */
         audio =
             new Audio(
                 soundUrl
@@ -2271,6 +2565,13 @@ function playGiftSound() {
 
                 } catch (e) {
                 }
+
+
+                /*
+                 * 1つ空いたので
+                 * 次のギフト音声を再生。
+                 */
+                processGiftAudioQueue();
             };
 
 
@@ -2308,7 +2609,9 @@ function playGiftSound() {
 
                     console.log(
                         '[DEBUG] Gift audio started:',
-                        soundUrl
+                        soundUrl,
+                        'active:',
+                        activeGiftAudios.size
                     );
 
                 }
@@ -2327,7 +2630,6 @@ function playGiftSound() {
             );
         }
 
-
     } catch (e) {
 
         console.warn(
@@ -2335,7 +2637,56 @@ function playGiftSound() {
             soundUrl,
             e
         );
+
+
+        processGiftAudioQueue();
     }
+}
+
+
+/* =========================================================
+   GIFT AUDIO PLAY
+========================================================= */
+
+function playGiftSound() {
+
+    if (
+        !giftAudioEnabled
+    ) {
+
+        return;
+    }
+
+
+    if (
+        !giftAudioUnlocked
+    ) {
+
+        console.log(
+            '[DEBUG] Gift audio waiting for unlock'
+        );
+
+
+        return;
+    }
+
+
+    const soundUrl =
+        selectGiftAudioUrl();
+
+
+    /*
+     * まずキューへ入れる。
+     *
+     * 最大3個まで同時再生し、
+     * それを超えた分は順番待ち。
+     */
+    giftAudioQueue.push(
+        soundUrl
+    );
+
+
+    processGiftAudioQueue();
 }
 
 
@@ -2395,10 +2746,6 @@ function addGiftItem(data) {
         );
 
 
-    /*
-     * 同じ時間・同じギフトは
-     * 一覧にも音にも追加しない。
-     */
     if (
         displayedGiftKeys.has(
             giftDuplicateKey
@@ -2598,10 +2945,6 @@ function addGiftItem(data) {
                 'overflow:hidden;' +
                 '">' +
 
-                    /*
-                     * ユーザーIDではなく
-                     * 表示名。
-                     */
                     '<b>' +
                     generateDisplayName(
                         data
@@ -2725,9 +3068,6 @@ function addGiftItem(data) {
     );
 
 
-    /*
-     * 実際にギフト表示を追加・更新した。
-     */
     return true;
 }
 
@@ -2810,10 +3150,6 @@ function addChatItem(
 
             '<span style="min-width:0;">' +
 
-                /*
-                 * ユーザーIDではなく
-                 * 表示名。
-                 */
                 '<b>' +
                 generateDisplayName(
                     data
@@ -3261,13 +3597,6 @@ connection.on(
         }
 
 
-        /*
-         * addGiftItemがtrueのときだけ
-         * 実際に画面へ追加されたギフト。
-         *
-         * 重複ギフトならfalseなので
-         * 音も鳴らさない。
-         */
         const added =
             addGiftItem(
                 data
@@ -3278,6 +3607,10 @@ connection.on(
             added
         ) {
 
+            /*
+             * 画面に実際に追加されたギフトだけ
+             * 音声キューへ入れる。
+             */
             playGiftSound();
         }
     }
