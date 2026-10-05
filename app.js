@@ -1,43 +1,186 @@
-// This will use the demo backend if you open index.html locally via file://,
-// otherwise sacrifice-nico.com will be used.
-
 let backendUrl =
     location.protocol === 'file:'
-        ? "https://tiktok-chat-reader.zerody.one/"
-        : "https://sacrifice-nico.com";
+        ? 'https://tiktok-chat-reader.zerody.one/'
+        : 'https://sacrifice-nico.com';
 
 let connection =
     new TikTokIOConnection(backendUrl);
 
-
-// ========================================
-// Counter
-// ========================================
 
 let viewerCount = 0;
 let likeCount = 0;
 let diamondsCount = 0;
 
 
-// ========================================
-// Settings
-// ========================================
-
 if (!window.settings) {
     window.settings = {};
 }
 
 
-// ========================================
-// Detected viewers
-// ========================================
+/* ========================================
+   Gift sound
+======================================== */
 
-const detectedViewers = new Map();
+let giftAudio = null;
+let giftAudioReady = false;
 
 
-// ========================================
-// URL username
-// ========================================
+function prepareGiftAudio() {
+
+    if (giftAudio) {
+        return;
+    }
+
+
+    giftAudio =
+        new Audio(
+            './gift.mp3'
+        );
+
+    giftAudio.preload =
+        'auto';
+
+    giftAudio.volume =
+        1.0;
+
+
+    try {
+        giftAudio.load();
+    } catch (e) {
+
+        console.warn(
+            'Gift audio load failed:',
+            e
+        );
+    }
+}
+
+
+function unlockGiftAudio() {
+
+    prepareGiftAudio();
+
+
+    if (!giftAudio) {
+        return;
+    }
+
+
+    /*
+     * ユーザー操作中に一度再生・停止して
+     * ブラウザの音声再生制限を解除する。
+     */
+
+    try {
+
+        giftAudio.muted = true;
+
+        const promise =
+            giftAudio.play();
+
+
+        if (
+            promise &&
+            typeof promise.then ===
+            'function'
+        ) {
+
+            promise.then(
+                () => {
+
+                    giftAudio.pause();
+
+                    giftAudio.currentTime =
+                        0;
+
+                    giftAudio.muted =
+                        false;
+
+                    giftAudioReady =
+                        true;
+                }
+            ).catch(
+                () => {
+
+                    giftAudio.muted =
+                        false;
+                }
+            );
+        }
+
+    } catch (e) {
+
+        console.warn(
+            'Gift audio unlock failed:',
+            e
+        );
+    }
+}
+
+
+function playGiftSound() {
+
+    prepareGiftAudio();
+
+
+    if (!giftAudio) {
+        return;
+    }
+
+
+    try {
+
+        giftAudio.pause();
+
+        giftAudio.currentTime =
+            0;
+
+        giftAudio.muted =
+            false;
+
+
+        const promise =
+            giftAudio.play();
+
+
+        if (
+            promise &&
+            typeof promise.catch ===
+            'function'
+        ) {
+
+            promise.catch(
+                error => {
+
+                    console.warn(
+                        'Gift sound playback blocked:',
+                        error
+                    );
+                }
+            );
+        }
+
+    } catch (e) {
+
+        console.warn(
+            'Gift sound playback failed:',
+            e
+        );
+    }
+}
+
+
+/* ========================================
+   Viewer list
+======================================== */
+
+const detectedViewers =
+    new Map();
+
+
+/* ========================================
+   URL
+======================================== */
 
 function getUsernameFromUrl() {
 
@@ -50,14 +193,18 @@ function getUsernameFromUrl() {
 }
 
 
-// ========================================
-// Ready
-// ========================================
+/* ========================================
+   Ready
+======================================== */
 
 $(document).ready(() => {
 
+    prepareGiftAudio();
+
+
     const queryUsername =
         getUsernameFromUrl();
+
 
     if (queryUsername) {
 
@@ -71,7 +218,12 @@ $(document).ready(() => {
 
 
     $('#connectButton').click(
-        connect
+        function() {
+
+            unlockGiftAudio();
+
+            connect();
+        }
     );
 
 
@@ -80,6 +232,9 @@ $(document).ready(() => {
         function(e) {
 
             if (e.key === 'Enter') {
+
+                unlockGiftAudio();
+
                 connect();
             }
 
@@ -87,26 +242,25 @@ $(document).ready(() => {
     );
 
 
-    // ====================================
-    // Viewer menu
-    // ====================================
+    $('#copyQueryButton').click(
+        copyQueryLink
+    );
+
 
     $('#viewerMenuButton').click(
         openViewerMenu
     );
 
+
     $('#viewerMenuClose').click(
         closeViewerMenu
     );
+
 
     $('#viewerMenuOverlay').click(
         closeViewerMenu
     );
 
-
-    // ====================================
-    // Auto connect
-    // ====================================
 
     if (window.settings.username) {
         connect();
@@ -114,18 +268,154 @@ $(document).ready(() => {
 });
 
 
-// ========================================
-// Viewer menu
-// ========================================
+/* ========================================
+   Copy query link
+======================================== */
+
+async function copyQueryLink() {
+
+    let username =
+        $('#uniqueIdInput').val();
+
+
+    username =
+        normalizeUniqueId(
+            username
+        );
+
+
+    if (!username) {
+
+        alert(
+            'ユーザーIDを入力してください。'
+        );
+
+        return;
+    }
+
+
+    const baseUrl =
+        window.location.origin +
+        window.location.pathname;
+
+
+    const queryUrl =
+        baseUrl +
+        '?username=' +
+        encodeURIComponent(
+            username
+        );
+
+
+    try {
+
+        if (
+            navigator.clipboard &&
+            navigator.clipboard.writeText
+        ) {
+
+            await navigator.clipboard.writeText(
+                queryUrl
+            );
+
+        } else {
+
+            const textarea =
+                document.createElement(
+                    'textarea'
+                );
+
+            textarea.value =
+                queryUrl;
+
+            textarea.style.position =
+                'fixed';
+
+            textarea.style.opacity =
+                '0';
+
+            document.body.appendChild(
+                textarea
+            );
+
+            textarea.focus();
+            textarea.select();
+
+            document.execCommand(
+                'copy'
+            );
+
+            textarea.remove();
+        }
+
+
+        const button =
+            $('#copyQueryButton');
+
+
+        button.text(
+            '✓ コピー済み'
+        );
+
+
+        button.addClass(
+            'copied'
+        );
+
+
+        setTimeout(
+            () => {
+
+                button.text(
+                    '🔗 コピー'
+                );
+
+                button.removeClass(
+                    'copied'
+                );
+
+            },
+            1500
+        );
+
+    } catch (error) {
+
+        console.error(
+            'Copy failed:',
+            error
+        );
+
+
+        /*
+         * iOSなどでClipboard APIが
+         * 利用できない場合はURLを表示。
+         */
+
+        window.prompt(
+            '以下のURLをコピーしてください。',
+            queryUrl
+        );
+    }
+}
+
+
+/* ========================================
+   Viewer menu
+======================================== */
 
 function openViewerMenu() {
 
     $('#viewerMenu')
         .addClass('open')
-        .attr('aria-hidden', 'false');
+        .attr(
+            'aria-hidden',
+            'false'
+        );
+
 
     $('#viewerMenuOverlay')
         .addClass('open');
+
 
     updateViewerMenu();
 }
@@ -135,22 +425,27 @@ function closeViewerMenu() {
 
     $('#viewerMenu')
         .removeClass('open')
-        .attr('aria-hidden', 'true');
+        .attr(
+            'aria-hidden',
+            'true'
+        );
+
 
     $('#viewerMenuOverlay')
         .removeClass('open');
 }
 
 
-// ========================================
-// Get unique ID
-// ========================================
+/* ========================================
+   User data
+======================================== */
 
 function getDataUniqueId(data) {
 
     if (!data) {
         return '';
     }
+
 
     return (
         data.uniqueId ||
@@ -163,15 +458,12 @@ function getDataUniqueId(data) {
 }
 
 
-// ========================================
-// Get nickname
-// ========================================
-
 function getDisplayName(data) {
 
     if (!data) {
         return '';
     }
+
 
     return (
         data.nickname ||
@@ -185,9 +477,9 @@ function getDisplayName(data) {
 }
 
 
-// ========================================
-// Add detected viewer
-// ========================================
+/* ========================================
+   Register viewer
+======================================== */
 
 function registerViewer(data) {
 
@@ -195,8 +487,10 @@ function registerViewer(data) {
         return;
     }
 
+
     const uniqueId =
         getDataUniqueId(data);
+
 
     const userId =
         data.userId ||
@@ -219,32 +513,26 @@ function registerViewer(data) {
         );
 
 
-    const viewer = {
-
-        key: key,
-
-        userId:
-            String(userId || ''),
-
-        uniqueId:
-            uniqueId,
-
-        nickname:
-            getDisplayName(data),
-
-        profilePictureUrl:
-            data.profilePictureUrl ||
-            (
-                data.user &&
-                data.user.profilePictureUrl
-            ) ||
-            ''
-    };
-
-
     detectedViewers.set(
         key,
-        viewer
+        {
+            key: key,
+
+            userId:
+                String(
+                    userId || ''
+                ),
+
+            uniqueId:
+                uniqueId,
+
+            nickname:
+                getDisplayName(data),
+
+            profilePictureUrl:
+                data.profilePictureUrl ||
+                ''
+        }
     );
 
 
@@ -252,9 +540,9 @@ function registerViewer(data) {
 }
 
 
-// ========================================
-// Update viewer menu
-// ========================================
+/* ========================================
+   Update viewer menu
+======================================== */
 
 function updateViewerMenu() {
 
@@ -268,7 +556,9 @@ function updateViewerMenu() {
     );
 
 
-    if (detectedViewers.size === 0) {
+    if (
+        detectedViewers.size === 0
+    ) {
 
         container.html(
             '<div class="viewerEmpty">' +
@@ -283,11 +573,7 @@ function updateViewerMenu() {
     const viewers =
         Array.from(
             detectedViewers.values()
-        );
-
-
-    // 新しく取得した順
-    viewers.reverse();
+        ).reverse();
 
 
     let html = '';
@@ -319,13 +605,16 @@ function updateViewerMenu() {
 
 
             html +=
+
                 '<div class="viewerItem">' +
 
                 '<img ' +
                 'class="viewerItemPicture" ' +
                 'src="' +
                 image +
-                '"' +
+                '" ' +
+                'loading="lazy" ' +
+                'onerror="this.style.visibility=\'hidden\'"' +
                 '>' +
 
                 '<div class="viewerItemInfo">' +
@@ -352,13 +641,15 @@ function updateViewerMenu() {
     );
 
 
-    container.html(html);
+    container.html(
+        html
+    );
 }
 
 
-// ========================================
-// Normalize unique ID
-// ========================================
+/* ========================================
+   Normalize ID
+======================================== */
 
 function normalizeUniqueId(value) {
 
@@ -366,11 +657,14 @@ function normalizeUniqueId(value) {
         return '';
     }
 
+
     value =
         String(value).trim();
 
 
-    if (value.charAt(0) === '@') {
+    if (
+        value.charAt(0) === '@'
+    ) {
 
         value =
             value.substring(1);
@@ -380,12 +674,18 @@ function normalizeUniqueId(value) {
     try {
 
         if (
-            value.indexOf('http://') === 0 ||
-            value.indexOf('https://') === 0
+            value.indexOf(
+                'http://'
+            ) === 0 ||
+
+            value.indexOf(
+                'https://'
+            ) === 0
         ) {
 
             const url =
                 new URL(value);
+
 
             let path =
                 url.pathname;
@@ -426,9 +726,9 @@ function normalizeUniqueId(value) {
 }
 
 
-// ========================================
-// Connect
-// ========================================
+/* ========================================
+   Connect
+======================================== */
 
 function connect() {
 
@@ -460,7 +760,7 @@ function connect() {
 
 
         $('#stateText').text(
-            'Connecting...'
+            '接続中...'
         );
 
 
@@ -525,9 +825,9 @@ function connect() {
 }
 
 
-// ========================================
-// Sanitize
-// ========================================
+/* ========================================
+   Sanitize
+======================================== */
 
 function sanitize(text) {
 
@@ -564,9 +864,30 @@ function sanitize(text) {
 }
 
 
-// ========================================
-// Room stats
-// ========================================
+/* ========================================
+   Time
+======================================== */
+
+function getCurrentTime() {
+
+    const now =
+        new Date();
+
+
+    return now.toLocaleTimeString(
+        'ja-JP',
+        {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        }
+    );
+}
+
+
+/* ========================================
+   Stats
+======================================== */
 
 function updateRoomStats() {
 
@@ -574,9 +895,13 @@ function updateRoomStats() {
 
         '視聴者数: <b>' +
         viewerCount.toLocaleString() +
-        '</b> いいね: <b>' +
+        '</b> ' +
+
+        'いいね: <b>' +
         likeCount.toLocaleString() +
-        '</b> ダイヤ: <b>' +
+        '</b> ' +
+
+        'ダイヤ: <b>' +
         diamondsCount.toLocaleString() +
         '</b>'
 
@@ -584,9 +909,9 @@ function updateRoomStats() {
 }
 
 
-// ========================================
-// Username link
-// ========================================
+/* ========================================
+   Username
+======================================== */
 
 function generateUsernameLink(data) {
 
@@ -619,9 +944,9 @@ function generateUsernameLink(data) {
 }
 
 
-// ========================================
-// Gift streak
-// ========================================
+/* ========================================
+   Gift streak
+======================================== */
 
 function isPendingStreak(data) {
 
@@ -632,9 +957,9 @@ function isPendingStreak(data) {
 }
 
 
-// ========================================
-// Comment duplicate detection
-// ========================================
+/* ========================================
+   Duplicate comments
+======================================== */
 
 const recentComments =
     new Map();
@@ -647,16 +972,6 @@ function getCommentKey(
     data,
     text
 ) {
-
-    /*
-     * 今回のログでは
-     *
-     * data.common.msgId
-     *
-     * にコメントIDが入っている。
-     *
-     * まずこれを使う。
-     */
 
     const messageId =
 
@@ -685,12 +1000,6 @@ function getCommentKey(
         );
     }
 
-
-    /*
-     * IDが取れない場合だけ
-     * ユーザー + コメント本文
-     * を使う。
-     */
 
     return (
 
@@ -733,11 +1042,6 @@ function isDuplicateComment(
         );
 
 
-    /*
-     * 3秒以内に同じものが来たら
-     * 重複として弾く。
-     */
-
     if (
         previous &&
         now - previous <
@@ -753,10 +1057,6 @@ function isDuplicateComment(
         now
     );
 
-
-    /*
-     * 古い履歴を軽く掃除する。
-     */
 
     if (
         recentComments.size >
@@ -797,9 +1097,9 @@ function isDuplicateComment(
 }
 
 
-// ========================================
-// Add chat item
-// ========================================
+/* ========================================
+   Chat
+======================================== */
 
 function addChatItem(
     color,
@@ -903,9 +1203,9 @@ function addChatItem(
 }
 
 
-// ========================================
-// Add gift item
-// ========================================
+/* ========================================
+   Gifts
+======================================== */
 
 function addGiftItem(data) {
 
@@ -945,6 +1245,27 @@ function addGiftItem(data) {
         );
 
 
+    const giftTime =
+        getCurrentTime();
+
+
+    const repeatCount =
+        Number(
+            data.repeatCount || 0
+        );
+
+
+    const diamondCount =
+        Number(
+            data.diamondCount || 0
+        );
+
+
+    const totalCost =
+        diamondCount *
+        repeatCount;
+
+
     let html =
 
         '<div data-streakid="' +
@@ -978,11 +1299,19 @@ function addGiftItem(data) {
 
         ':</b> ' +
 
+        '<span class="giftTime">' +
+
+        giftTime +
+
+        '</span>' +
+
+        '<div class="giftDescription">' +
+
         sanitize(
             data.describe || ''
         ) +
 
-        '<br>' +
+        '</div>' +
 
         '<div>' +
 
@@ -1005,49 +1334,16 @@ function addGiftItem(data) {
 
         '</td>' +
 
-        '<td>' +
+        '<td class="giftDetails">' +
 
         '<span>' +
 
-        'Name: <b>' +
+        'ギフト: <b>' +
 
         sanitize(
             data.giftName ||
             ''
         ) +
-
-        '</b> ' +
-
-        '(ID:' +
-
-        sanitize(
-            data.giftId ||
-            ''
-        ) +
-
-        ')' +
-
-        '</span>' +
-
-        '<br>' +
-
-        '<span>' +
-
-        'Repeat: <b style="' +
-
-        (
-            isPendingStreak(data)
-                ? 'color:red'
-                : ''
-        ) +
-
-        '">' +
-
-        'x' +
-
-        Number(
-            data.repeatCount || 0
-        ).toLocaleString() +
 
         '</b>' +
 
@@ -1057,19 +1353,48 @@ function addGiftItem(data) {
 
         '<span>' +
 
-        'Cost: <b>' +
+        'ギフトID: <b>' +
+
+        sanitize(
+            data.giftId ||
+            ''
+        ) +
+
+        '</b>' +
+
+        '</span>' +
+
+        '<br>' +
+
+        '<span>' +
+
+        'リピート: <b style="' +
 
         (
-            Number(
-                data.diamondCount || 0
-            ) *
+            isPendingStreak(data)
+                ? 'color:#ff596d'
+                : ''
+        ) +
 
-            Number(
-                data.repeatCount || 0
-            )
-        ).toLocaleString() +
+        '">' +
 
-        ' Diamonds</b>' +
+        '×' +
+
+        repeatCount.toLocaleString() +
+
+        '</b>' +
+
+        '</span>' +
+
+        '<br>' +
+
+        '<span>' +
+
+        'コスト: <b>' +
+
+        totalCost.toLocaleString() +
+
+        ' ダイヤ</b>' +
 
         '</span>' +
 
@@ -1124,9 +1449,9 @@ function addGiftItem(data) {
 }
 
 
-// ========================================
-// Room user
-// ========================================
+/* ========================================
+   Room users
+======================================== */
 
 connection.on(
     'roomUser',
@@ -1146,9 +1471,9 @@ connection.on(
 );
 
 
-// ========================================
-// Like
-// ========================================
+/* ========================================
+   Likes
+======================================== */
 
 connection.on(
     'like',
@@ -1171,7 +1496,7 @@ connection.on(
 
         if (
             window.settings.showLikes ===
-            "0"
+            '0'
         ) {
 
             return;
@@ -1183,35 +1508,22 @@ connection.on(
             'number'
         ) {
 
-            let label =
-                msg.label || '';
-
-
             addChatItem(
 
-                '#447dd4',
+                '#7187d8',
 
                 msg,
 
-                label
-                    .replace(
-                        '{0:user}',
-                        ''
-                    )
-                    .replace(
-                        'likes',
-                        msg.likeCount +
-                        ' likes'
-                    )
+                'ライブにいいねされました'
             );
         }
     }
 );
 
 
-// ========================================
-// Member join
-// ========================================
+/* ========================================
+   Member
+======================================== */
 
 let joinMsgDelay = 0;
 
@@ -1224,7 +1536,7 @@ connection.on(
 
         if (
             window.settings.showJoins ===
-            "0"
+            '0'
         ) {
 
             return;
@@ -1262,27 +1574,22 @@ connection.on(
 
 
                 addChatItem(
-
-                    '#21b2c2',
-
+                    '#42aeb9',
                     msg,
-
-                    'joined',
-
+                    'ライブに参加しました',
                     true
                 );
 
             },
-
             joinMsgDelay
         );
     }
 );
 
 
-// ========================================
-// New chat comment
-// ========================================
+/* ========================================
+   Chat
+======================================== */
 
 connection.on(
     'chat',
@@ -1293,7 +1600,7 @@ connection.on(
 
         if (
             window.settings.showChats ===
-            "0"
+            '0'
         ) {
 
             return;
@@ -1303,14 +1610,6 @@ connection.on(
         const comment =
             msg.comment || '';
 
-
-        /*
-         * 重複コメントを弾く。
-         *
-         * 深い判定はせず、
-         * 同一ID・同一内容の短時間重複だけ
-         * 対象にする。
-         */
 
         if (
             isDuplicateComment(
@@ -1337,15 +1636,22 @@ connection.on(
 );
 
 
-// ========================================
-// Gift
-// ========================================
+/* ========================================
+   Gift
+======================================== */
 
 connection.on(
     'gift',
     (data) => {
 
         registerViewer(data);
+
+
+        /*
+         * ギフトを受信したら音を鳴らす。
+         */
+
+        playGiftSound();
 
 
         if (
@@ -1372,7 +1678,7 @@ connection.on(
 
         if (
             window.settings.showGifts ===
-            "0"
+            '0'
         ) {
 
             return;
@@ -1384,9 +1690,9 @@ connection.on(
 );
 
 
-// ========================================
-// Share / Follow
-// ========================================
+/* ========================================
+   Social
+======================================== */
 
 connection.on(
     'social',
@@ -1397,7 +1703,7 @@ connection.on(
 
         if (
             window.settings.showFollows ===
-            "0"
+            '0'
         ) {
 
             return;
@@ -1414,33 +1720,68 @@ connection.on(
                 'follow'
             )
 
-                ? '#ff005e'
+                ? '#d95678'
 
-                : '#2fb816';
+                : '#4ba84b';
 
 
-        let label =
-            data.label || '';
+        let text =
+            'ソーシャルイベント';
+
+
+        if (
+            displayType.includes(
+                'follow'
+            )
+        ) {
+
+            text =
+                'フォローされました';
+
+        } else if (
+            displayType.includes(
+                'share'
+            )
+        ) {
+
+            text =
+                'ライブをシェアされました';
+
+        } else if (
+            data.label
+        ) {
+
+            text =
+                String(
+                    data.label
+                )
+                    .replace(
+                        '{0:user}',
+                        ''
+                    )
+                    .replace(
+                        'liked the live',
+                        'ライブにいいねされました'
+                    )
+                    .replace(
+                        'shared the live',
+                        'ライブをシェアされました'
+                    );
+        }
 
 
         addChatItem(
-
             color,
-
             data,
-
-            label.replace(
-                '{0:user}',
-                ''
-            )
+            text
         );
     }
 );
 
 
-// ========================================
-// Stream end
-// ========================================
+/* ========================================
+   Stream end
+======================================== */
 
 connection.on(
     'streamEnd',

@@ -1,37 +1,32 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7GL4J23WD7"></script>
-
-    <script>
-        window.dataLayer = window.dataLayer || [];
-
-        function gtag() {
-            dataLayer.push(arguments);
-        }
-
-        gtag('js', new Date());
-        gtag('config', 'G-7GL4J23WD7');
-    </script>
-
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        http-equiv="X-UA-Compatible"
+        content="IE=edge"
+    >
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <title>TikTok LIVE コメントビューアー|コメビュ</title>
+    <title>TikTok LIVE コメントビューアー</title>
 
     <meta
         name="description"
-        content="TikTok LIVEのコメントビューアー"
+        content="TikTok LIVE コメントビューアー"
     >
 
-    <meta
-        name="keywords"
-        content="TikTok,Live,ライブ,コメント,コメビュ,コメントビューアー,コメントビューワー"
+    <link
+        rel="icon"
+        href="favicon.ico"
     >
 
-    <link rel="icon" href="favicon.ico">
-    <link rel="stylesheet" href="style.css">
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 
     <script
         src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
@@ -50,7 +45,9 @@
 
     <script>
         function generateOverlay() {
-            let username = $('#uniqueIdInput').val();
+
+            let username =
+                $('#uniqueIdInput').val();
 
             let url =
                 `/obs.html?username=${encodeURIComponent(username)}` +
@@ -59,14 +56,22 @@
                 `&showGifts=1` +
                 `&showFollows=1` +
                 `&showJoins=1` +
-                `&bgColor=rgb(24,23,28)` +
-                `&fontColor=rgb(227,229,235)` +
+                `&bgColor=rgb(18,18,22)` +
+                `&fontColor=rgb(232,232,238)` +
                 `&fontSize=1.3em`;
 
             if (username) {
-                window.open(url, '_blank');
+
+                window.open(
+                    url,
+                    '_blank'
+                );
+
             } else {
-                alert("ユーザーIDを入力してください。");
+
+                alert(
+                    'ユーザーIDを入力してください。'
+                );
             }
         }
     </script>
@@ -75,13 +80,11 @@
 <body>
 
     <header class="head">
-        <img
-            src="./logo.png"
-            alt="TikTok LIVE コメントビューアー"
-            height="32"
-        >
 
-        <!-- 視聴者メニュー -->
+        <div class="headerTitle">
+            TikTok LIVE コメントビューアー
+        </div>
+
         <button
             id="viewerMenuButton"
             class="viewerMenuButton"
@@ -92,59 +95,73 @@
             <span></span>
             <span></span>
         </button>
+
     </header>
 
+
     <div class="inputFields">
+
         <input
             type="text"
             id="uniqueIdInput"
-            placeholder="ユーザーIDかURL を入力..."
+            placeholder="ユーザーIDかURLを入力..."
+            autocomplete="off"
         >
 
-        <button id="connectButton">
+        <button
+            id="copyQueryButton"
+            type="button"
+            class="copyQueryButton"
+        >
+            🔗 コピー
+        </button>
+
+        <button
+            id="connectButton"
+            type="button"
+        >
             接続
         </button>
+
     </div>
 
+
     <div class="statusBar">
+
         <pre id="stateText"></pre>
+
         <div id="roomStats"></div>
+
     </div>
+
 
     <div class="mainContent">
 
         <div class="chatcontainer">
+
             <h3 class="containerheader">
                 チャット
             </h3>
+
         </div>
 
+
         <div class="giftcontainer">
+
             <h3 class="containerheader">
                 ギフト
             </h3>
+
         </div>
 
     </div>
 
-    <footer class="siteFooter">
-        <a
-            href="https://www.tiktok.com/@sacrifice_nico"
-            target="_blank"
-        >
-            @sacrifice_nico
-        </a>
-    </footer>
-
-
-    <!-- ================================ -->
-    <!-- 視聴者サイドメニュー -->
-    <!-- ================================ -->
 
     <div
         id="viewerMenuOverlay"
         class="viewerMenuOverlay"
     ></div>
+
 
     <aside
         id="viewerMenu"
@@ -155,6 +172,7 @@
         <div class="viewerMenuHeader">
 
             <div>
+
                 <div class="viewerMenuTitle">
                     視聴者
                 </div>
@@ -165,7 +183,9 @@
                 >
                     0人
                 </div>
+
             </div>
+
 
             <button
                 id="viewerMenuClose"
@@ -178,13 +198,16 @@
 
         </div>
 
+
         <div
             id="viewerList"
             class="viewerList"
         >
+
             <div class="viewerEmpty">
                 まだ視聴者情報がありません
             </div>
+
         </div>
 
     </aside>
