@@ -23,7 +23,7 @@ const TEGAMI_AUDIO_URL =
     './tegami.mp3';
 
 const TEGAMI_CHANCE_DENOMINATOR =
-    10;
+    30;
 
 
 const DURANDAL_AUDIO_URL =
@@ -239,9 +239,6 @@ function loadUrlSettings() {
     );
 
 
-    /*
-     * giftSound
-     */
     if (
         window.settings.giftSound
     ) {
@@ -260,12 +257,6 @@ function loadUrlSettings() {
     }
 
 
-    /*
-     * giftMute
-     *
-     * 0 = ON
-     * 1 = OFF
-     */
     if (
         window.settings.giftMute === '1'
     ) {
@@ -304,12 +295,6 @@ function setupFirstInteractionAudioUnlock() {
     const handleFirstInteraction =
         function (event) {
 
-            /*
-             * BGMボタン・ギフト音ボタンのクリックは
-             * それぞれのボタン側で処理する。
-             *
-             * ここでは何もしない。
-             */
             if (
                 event &&
                 event.target &&
@@ -406,11 +391,6 @@ function setupGiftAudioButton() {
         'click',
         async function (event) {
 
-            /*
-             * document側の
-             * first interaction処理に
-             * 伝播させない。
-             */
             event.stopPropagation();
 
 
@@ -523,16 +503,6 @@ function setupBgmButton() {
         'click',
         async function (event) {
 
-            /*
-             * ここが重要。
-             *
-             * BGMボタンのクリックを
-             * documentまで伝播させない。
-             *
-             * これによってBGMボタンを押した瞬間に
-             * gift.mp3 / tegami.mp3などの
-             * unlock処理が走ることを防ぐ。
-             */
             event.stopPropagation();
 
 
@@ -544,11 +514,6 @@ function setupBgmButton() {
                 bgmEnabled
             ) {
 
-                /*
-                 * BGMの開始だけ行う。
-                 *
-                 * ギフト音unlockは絶対に行わない。
-                 */
                 await startBgm();
 
             } else {
@@ -692,9 +657,6 @@ async function startBgm() {
             getBgmAudioContext();
 
 
-        /*
-         * Web Audio APIが使用できない場合。
-         */
         if (
             !context
         ) {
@@ -705,10 +667,6 @@ async function startBgm() {
         }
 
 
-        /*
-         * AudioContextが停止中なら
-         * ユーザー操作からresumeする。
-         */
         if (
             context.state ===
             'suspended'
@@ -730,9 +688,6 @@ async function startBgm() {
         }
 
 
-        /*
-         * Audio作成。
-         */
         if (
             !bgmAudio
         ) {
@@ -769,10 +724,6 @@ async function startBgm() {
         }
 
 
-        /*
-         * MediaElementSourceは
-         * 同じAudio要素に対して一度だけ。
-         */
         if (
             !bgmSourceNode
         ) {
@@ -784,9 +735,6 @@ async function startBgm() {
         }
 
 
-        /*
-         * GainNode作成。
-         */
         if (
             !bgmGainNode
         ) {
@@ -806,17 +754,10 @@ async function startBgm() {
         }
 
 
-        /*
-         * BGM音量。
-         */
         bgmGainNode.gain.value =
             BGM_GAIN;
 
 
-        /*
-         * すでに再生中なら
-         * 二重再生しない。
-         */
         if (
             !bgmAudio.paused
         ) {
@@ -829,20 +770,11 @@ async function startBgm() {
         }
 
 
-        /*
-         * BGM開始。
-         */
         await bgmAudio.play();
 
 
         console.log(
             '[DEBUG] BGM started'
-        );
-
-
-        console.log(
-            '[DEBUG] BGM gain:',
-            BGM_GAIN
         );
 
 
@@ -1215,12 +1147,6 @@ $(document).ready(
         setupFirstInteractionAudioUnlock();
 
 
-        /*
-         * Connectボタン。
-         *
-         * ギフト音のunlockは
-         * Connectボタンを押したときだけ行う。
-         */
         $('#connectButton').click(
             async function () {
 
@@ -1241,9 +1167,6 @@ $(document).ready(
         );
 
 
-        /*
-         * Enterから接続。
-         */
         $('#uniqueIdInput').on(
             'keyup',
             async function (e) {
@@ -1290,14 +1213,6 @@ $(document).ready(
         );
 
 
-        /*
-         * クエリ接続。
-         *
-         * ここではギフト音unlockをしない。
-         *
-         * そのため自動接続時に
-         * 勝手に音が鳴ることもない。
-         */
         if (
             window.settings.username
         ) {
@@ -1752,39 +1667,51 @@ function updateRoomStats() {
 }
 
 
-function generateUsernameLink(data) {
+/* =========================================================
+   DISPLAY NAME
+========================================================= */
 
-    const uniqueId =
-        data.uniqueId ||
-        (
-            data.user &&
-            data.user.displayId
-        ) ||
-        '';
+function generateDisplayName(data) {
 
-
-    const safeId =
-        sanitize(
-            uniqueId
-        );
-
-
-    if (!safeId) {
-
+    if (!data) {
         return 'ユーザー';
     }
 
 
-    return (
-        '<a class="usernamelink" ' +
-        'href="https://www.tiktok.com/@' +
-        encodeURIComponent(
-            uniqueId
-        ) +
-        '" target="_blank">' +
-        safeId +
-        '</a>'
-    );
+    /*
+     * 最優先はイベント自身のnickname。
+     */
+    if (
+        data.nickname
+    ) {
+
+        return sanitize(
+            data.nickname
+        );
+    }
+
+
+    /*
+     * user.nicknameがある場合。
+     */
+    if (
+        data.user &&
+        data.user.nickname
+    ) {
+
+        return sanitize(
+            data.user.nickname
+        );
+    }
+
+
+    /*
+     * 最後のフォールバック。
+     *
+     * 通常のチャット・ギフトでは
+     * ここに来ない。
+     */
+    return 'ユーザー';
 }
 
 
@@ -2027,12 +1954,6 @@ async function unlockGiftAudio() {
     }
 
 
-    /*
-     * 各ギフト音をミュート状態で
-     * ユーザー操作中にunlockする。
-     *
-     * ここでは絶対に音を聞かせない。
-     */
     const urls = [
         NORMAL_GIFT_AUDIO_URL,
         TEGAMI_AUDIO_URL,
@@ -2155,33 +2076,35 @@ async function unlockGiftAudio() {
 
 function selectGiftAudioUrl() {
 
-    const maxDenominator =
-        Math.max(
-            1,
-            TEGAMI_CHANCE_DENOMINATOR,
-            DURANDAL_CHANCE_DENOMINATOR,
-            DAINSLEIF_CHANCE_DENOMINATOR
-        );
-
-
+    /*
+     * 1回だけ乱数を引く。
+     *
+     * これが重要。
+     *
+     * 1個のギフトについて
+     * 必ず以下のどれか1つだけになる。
+     *
+     * tegami    = 1/30
+     * durandal  = 1/50
+     * dainsleif = 1/100
+     * normal    = 残り
+     */
     const random =
-        Math.floor(
-            Math.random() *
-            maxDenominator
-        ) + 1;
+        Math.random();
 
 
     /*
-     * 10%
+     * Tegami
+     *
+     * 1/30
      */
     if (
-        random <=
-        TEGAMI_CHANCE_DENOMINATOR
+        random <
+        (1 / TEGAMI_CHANCE_DENOMINATOR)
     ) {
 
         console.log(
-            '[DEBUG] Gift sound:',
-            TEGAMI_AUDIO_URL
+            '[DEBUG] Gift sound selected: tegami.mp3'
         );
 
 
@@ -2190,29 +2113,22 @@ function selectGiftAudioUrl() {
 
 
     /*
-     * 2%
+     * Durandal
+     *
+     * 1/50
+     *
+     * Tegamiに該当しなかった場合だけ判定。
      */
-    const durandalStart =
-        TEGAMI_CHANCE_DENOMINATOR +
-        1;
-
-
-    const durandalEnd =
-        TEGAMI_CHANCE_DENOMINATOR +
-        Math.floor(
-            maxDenominator /
-            DURANDAL_CHANCE_DENOMINATOR
-        );
-
-
     if (
-        random >= durandalStart &&
-        random <= durandalEnd
+        random <
+        (
+            (1 / TEGAMI_CHANCE_DENOMINATOR) +
+            (1 / DURANDAL_CHANCE_DENOMINATOR)
+        )
     ) {
 
         console.log(
-            '[DEBUG] Gift sound:',
-            DURANDAL_AUDIO_URL
+            '[DEBUG] Gift sound selected: durandal.mp3'
         );
 
 
@@ -2221,30 +2137,23 @@ function selectGiftAudioUrl() {
 
 
     /*
-     * 1%
+     * Dainsleif
+     *
+     * 1/100
+     *
+     * 上2つに該当しなかった場合だけ判定。
      */
-    const dainsleifStart =
-        durandalEnd +
-        1;
-
-
-    const dainsleifEnd =
-        dainsleifStart +
-        Math.floor(
-            maxDenominator /
-            DAINSLEIF_CHANCE_DENOMINATOR
-        ) -
-        1;
-
-
     if (
-        random >= dainsleifStart &&
-        random <= dainsleifEnd
+        random <
+        (
+            (1 / TEGAMI_CHANCE_DENOMINATOR) +
+            (1 / DURANDAL_CHANCE_DENOMINATOR) +
+            (1 / DAINSLEIF_CHANCE_DENOMINATOR)
+        )
     ) {
 
         console.log(
-            '[DEBUG] Gift sound:',
-            DAINSLEIF_AUDIO_URL
+            '[DEBUG] Gift sound selected: dainsleif.mp3'
         );
 
 
@@ -2254,13 +2163,9 @@ function selectGiftAudioUrl() {
 
     /*
      * 残りは通常音。
-     *
-     * giftSoundクエリ指定時は
-     * その音が通常音になる。
      */
     console.log(
-        '[DEBUG] Gift sound:',
-        giftAudioUrl
+        '[DEBUG] Gift sound selected: normal'
     );
 
 
@@ -2305,10 +2210,9 @@ function playGiftSound() {
     try {
 
         /*
-         * 毎回新しいAudioを作る。
+         * ギフトごとに新しいAudio。
          *
-         * 前の音を止めないので
-         * 複数ギフト音を重ねて再生可能。
+         * 前のギフト音を止めない。
          */
         audio =
             new Audio(
@@ -2327,18 +2231,6 @@ function playGiftSound() {
         activeGiftAudios.add(
             audio
         );
-
-
-        if (
-            activeGiftAudios.size >
-            MAX_ACTIVE_GIFT_AUDIOS
-        ) {
-
-            console.warn(
-                '[DEBUG] Too many active gift audios:',
-                activeGiftAudios.size
-            );
-        }
 
 
         const cleanup =
@@ -2503,13 +2395,17 @@ function addGiftItem(data) {
         );
 
 
+    /*
+     * 同じ時間・同じギフトは
+     * 一覧にも音にも追加しない。
+     */
     if (
         displayedGiftKeys.has(
             giftDuplicateKey
         )
     ) {
 
-        return;
+        return false;
     }
 
 
@@ -2702,8 +2598,12 @@ function addGiftItem(data) {
                 'overflow:hidden;' +
                 '">' +
 
+                    /*
+                     * ユーザーIDではなく
+                     * 表示名。
+                     */
                     '<b>' +
-                    generateUsernameLink(
+                    generateDisplayName(
                         data
                     ) +
                     ':</b> ' +
@@ -2823,6 +2723,12 @@ function addGiftItem(data) {
         },
         400
     );
+
+
+    /*
+     * 実際にギフト表示を追加・更新した。
+     */
+    return true;
 }
 
 
@@ -2904,8 +2810,12 @@ function addChatItem(
 
             '<span style="min-width:0;">' +
 
+                /*
+                 * ユーザーIDではなく
+                 * 表示名。
+                 */
                 '<b>' +
-                generateUsernameLink(
+                generateDisplayName(
                     data
                 ) +
                 ':</b> ' +
@@ -3292,10 +3202,6 @@ connection.on(
         }
 
 
-        /*
-         * 実際のコメントだけが
-         * いいね表示の抑制を解除。
-         */
         likeMessageDisplayed =
             false;
 
@@ -3355,16 +3261,25 @@ connection.on(
         }
 
 
-        addGiftItem(
-            data
-        );
-
-
         /*
-         * ギフトが来たときだけ
-         * ギフト音を鳴らす。
+         * addGiftItemがtrueのときだけ
+         * 実際に画面へ追加されたギフト。
+         *
+         * 重複ギフトならfalseなので
+         * 音も鳴らさない。
          */
-        playGiftSound();
+        const added =
+            addGiftItem(
+                data
+            );
+
+
+        if (
+            added
+        ) {
+
+            playGiftSound();
+        }
     }
 );
 
