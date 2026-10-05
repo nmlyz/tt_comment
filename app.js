@@ -111,6 +111,50 @@ const GIFT_AUDIO_POOL_SIZE =
     8;
 
 
+/*
+ * ========================================================
+ * GIFT AUDIO QUEUE
+ * ========================================================
+ *
+ * ギフトが大量に来た場合、
+ * 同時に音を鳴らさず、
+ * ここに再生待ちとしてストックする。
+ *
+ * 例:
+ *
+ * ギフトA
+ * ギフトB
+ * ギフトC
+ * ギフトD
+ *
+ * ↓
+ *
+ * A再生
+ * ↓
+ * B再生
+ * ↓
+ * C再生
+ * ↓
+ * D再生
+ *
+ * という順番。
+ */
+const giftAudioQueue = [];
+
+let giftAudioPlaying =
+    false;
+
+
+/*
+ * キューが増えすぎた場合の上限。
+ *
+ * 例えば大量のギフトが一気に来ても
+ * メモリが無限に増えないようにする。
+ */
+const GIFT_AUDIO_QUEUE_LIMIT =
+    100;
+
+
 /* =========================================================
    GIFT DUPLICATE
 ========================================================= */
@@ -262,6 +306,129 @@ function loadUrlSettings() {
 
 
 /* =========================================================
+   QUERY TAP CONNECT
+========================================================= */
+
+/*
+ * クエリでusernameが指定されている場合、
+ * いきなりconnect()しない。
+ *
+ * iPhone / Safariでは
+ * 自動接続時のplay()が
+ * ユーザー操作として認識されないため、
+ *
+ * 1回画面をタップ
+ * ↓
+ * Audio unlock
+ * ↓
+ * connect()
+ *
+ * とする。
+ */
+function setupQueryTapConnect() {
+
+    if (
+        !window.settings.username
+    ) {
+
+        return;
+    }
+
+    const overlay =
+        $('<div>')
+            .attr(
+                'id',
+                'queryConnectOverlay'
+            )
+            .css({
+                position: 'fixed',
+                top: '0',
+                left: '0',
+                right: '0',
+                bottom: '0',
+                width: '100%',
+                height: '100%',
+                background: 'rgba(0,0,0,0.72)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: '999999',
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent'
+            });
+
+    const message =
+        $('<div>')
+            .css({
+                padding: '20px 28px',
+                borderRadius: '14px',
+                background: '#2C2C2E',
+                color: '#FFFFFF',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                textAlign: 'center',
+                boxShadow: '0 8px 30px rgba(0,0,0,0.35)'
+            })
+            .text(
+                '画面をタップして接続'
+            );
+
+    overlay.append(
+        message
+    );
+
+    $('body').append(
+        overlay
+    );
+
+    overlay.on(
+        'click touchend',
+        function (e) {
+
+            e.preventDefault();
+
+            if (
+                overlay.data(
+                    'connecting'
+                )
+            ) {
+
+                return;
+            }
+
+            overlay.data(
+                'connecting',
+                true
+            );
+
+            /*
+             * ここは実際のユーザー操作。
+             *
+             * iOSのAudio unlockを
+             * ここで行う。
+             */
+            if (
+                giftAudioEnabled
+            ) {
+
+                unlockGiftAudio();
+            }
+
+            /*
+             * オーバーレイを消す。
+             */
+            overlay.remove();
+
+            /*
+             * 接続開始。
+             */
+            connect();
+        }
+    );
+}
+
+
+/* =========================================================
    GIFT AUDIO BUTTON
 ========================================================= */
 
@@ -295,6 +462,12 @@ function setupGiftAudioButton() {
             ) {
 
                 unlockGiftAudio();
+
+                /*
+                 * 既にキューに音声があれば
+                 * ONにした時点で再生開始。
+                 */
+                processGiftAudioQueue();
             }
 
             updateGiftAudioButton();
@@ -550,7 +723,9 @@ $(document).ready(() => {
     setupGiftExpandButton();
 
     /*
-     * 接続ボタンを押した瞬間は
+     * 通常の入力欄から接続。
+     *
+     * ボタンを押した瞬間は
      * ユーザー操作なので、
      * ここでAudio unlockを行う。
      */
@@ -566,16 +741,18 @@ $(document).ready(() => {
         connect();
     });
 
+
+    /*
+     * Enterから接続。
+     *
+     * これもユーザー操作。
+     */
     $('#uniqueIdInput').on(
         'keyup',
         function (e) {
 
             if (e.key === 'Enter') {
 
-                /*
-                 * Enterもユーザー操作なので
-                 * Audio unlockを試す。
-                 */
                 if (
                     giftAudioEnabled
                 ) {
@@ -587,6 +764,7 @@ $(document).ready(() => {
             }
         }
     );
+
 
     $('#copyUrlButton').click(
         copyQueryUrl
@@ -604,13 +782,30 @@ $(document).ready(() => {
         closeViewerMenu
     );
 
-    if (window.settings.username) {
+
+    /*
+     * クエリにusernameがある場合。
+     *
+     * ここでは直接connectしない。
+     *
+     * 画面タップ
+     * ↓
+     * Audio unlock
+     * ↓
+     * connect
+     *
+     * とする。
+     */
+    if (
+        window.settings.username
+    ) {
 
         $('#uniqueIdInput').val(
             window.settings.username
         );
 
-        connect();
+        setupQueryTapConnect();
+
     }
 });
 
@@ -1248,16 +1443,6 @@ function prepareGiftAudioPool() {
    AUDIO UNLOCK
 ========================================================= */
 
-/*
- * iPhone / Safari等の
- * 自動再生制限対策。
- *
- * 接続ボタンやEnterなど、
- * ユーザー操作から呼び出す。
- *
- * 音量は0なので、
- * アンロック時に音は鳴らさない。
- */
 function unlockGiftAudio() {
 
     if (
@@ -1308,6 +1493,13 @@ function unlockGiftAudio() {
                     '[DEBUG] Gift audio unlocked'
                 );
 
+                /*
+                 * unlock成功後、
+                 * 既に溜まっているギフトを
+                 * 再生する。
+                 */
+                processGiftAudioQueue();
+
             }).catch(error => {
 
                 audio.muted =
@@ -1334,30 +1526,10 @@ function unlockGiftAudio() {
 
 
 /* =========================================================
-   GIFT AUDIO PLAY
+   GIFT AUDIO QUEUE ADD
 ========================================================= */
 
-/*
- * 確率は上部の
- *
- * RARE_GIFT_CHANCE
- * SUPER_RARE_GIFT_CHANCE
- *
- * だけ変更すればOK。
- *
- * 例:
- *
- * RARE_GIFT_CHANCE = 5
- * → 5 / 100
- * → 5%
- *
- * SUPER_RARE_GIFT_CHANCE = 1
- * → 1 / 100
- * → 1%
- *
- * 超レアを先に判定する。
- */
-function playGiftSound() {
+function addGiftAudioToQueue() {
 
     if (
         !giftAudioEnabled
@@ -1366,59 +1538,151 @@ function playGiftSound() {
         return;
     }
 
+    const random =
+        Math.floor(
+            Math.random() *
+            GIFT_CHANCE_BASE
+        ) + 1;
+
+    let soundUrl =
+        giftAudioUrl;
+
+
+    /*
+     * 超レア
+     *
+     * 1 / 100
+     */
+    if (
+        random <=
+        SUPER_RARE_GIFT_CHANCE
+    ) {
+
+        soundUrl =
+            SUPER_RARE_GIFT_AUDIO_URL;
+
+    /*
+     * レア
+     *
+     * 2 / 100
+     */
+    } else if (
+        random <=
+        (
+            SUPER_RARE_GIFT_CHANCE +
+            RARE_GIFT_CHANCE
+        )
+    ) {
+
+        soundUrl =
+            RARE_GIFT_AUDIO_URL;
+    }
+
+
+    /*
+     * キューへ追加。
+     */
+    giftAudioQueue.push(
+        soundUrl
+    );
+
+
+    /*
+     * キューが多すぎる場合は
+     * 古いものから削除。
+     */
+    if (
+        giftAudioQueue.length >
+        GIFT_AUDIO_QUEUE_LIMIT
+    ) {
+
+        giftAudioQueue.splice(
+            0,
+            giftAudioQueue.length -
+            GIFT_AUDIO_QUEUE_LIMIT
+        );
+    }
+
+
+    /*
+     * 再生処理。
+     */
+    processGiftAudioQueue();
+}
+
+
+/* =========================================================
+   GIFT AUDIO QUEUE PLAY
+========================================================= */
+
+function processGiftAudioQueue() {
+
+    /*
+     * ミュート中なら再生しない。
+     *
+     * キューは残す。
+     */
+    if (
+        !giftAudioEnabled
+    ) {
+
+        return;
+    }
+
+
+    /*
+     * 既に再生中なら何もしない。
+     *
+     * 現在の音声が終わったら
+     * endedイベントから再度呼ばれる。
+     */
+    if (
+        giftAudioPlaying
+    ) {
+
+        return;
+    }
+
+
+    /*
+     * キューが空なら終了。
+     */
+    if (
+        giftAudioQueue.length === 0
+    ) {
+
+        return;
+    }
+
+
+    /*
+     * 音声再生がまだ許可されていない場合。
+     *
+     * iOSの場合、
+     * クエリ接続では
+     * 画面タップ後にunlockされる。
+     */
+    if (
+        !giftAudioUnlocked
+    ) {
+
+        console.log(
+            '[DEBUG] Gift audio waiting for unlock'
+        );
+
+        return;
+    }
+
+
+    const soundUrl =
+        giftAudioQueue.shift();
+
+
+    let audio;
+
     try {
 
-        const random =
-            Math.floor(
-                Math.random() *
-                GIFT_CHANCE_BASE
-            ) + 1;
-
-        let soundUrl =
-            giftAudioUrl;
-
-
-        /*
-         * 超レア
-         *
-         * 1 / 100
-         */
-        if (
-            random <=
-            SUPER_RARE_GIFT_CHANCE
-        ) {
-
-            soundUrl =
-                SUPER_RARE_GIFT_AUDIO_URL;
-
-        /*
-         * レア
-         *
-         * 2 / 100
-         *
-         * 現在は
-         * 2～3
-         */
-        } else if (
-            random <=
-            (
-                SUPER_RARE_GIFT_CHANCE +
-                RARE_GIFT_CHANCE
-            )
-        ) {
-
-            soundUrl =
-                RARE_GIFT_AUDIO_URL;
-        }
-
-
-        /*
-         * 毎回新しいAudioを作る。
-         *
-         * 前の音声が再生中でも
-         * 別のAudioとして再生できる。
-         */
-        const audio =
+        audio =
             new Audio(
                 soundUrl
             );
@@ -1428,6 +1692,100 @@ function playGiftSound() {
 
         audio.volume =
             1.0;
+
+    } catch (e) {
+
+        console.warn(
+            '[DEBUG] Gift audio create error:',
+            e
+        );
+
+        /*
+         * 次の音声へ。
+         */
+        setTimeout(
+            processGiftAudioQueue,
+            0
+        );
+
+        return;
+    }
+
+
+    giftAudioPlaying =
+        true;
+
+
+    /*
+     * 現在再生中のAudioを保持。
+     */
+    giftAudio =
+        audio;
+
+
+    let finished =
+        false;
+
+
+    /*
+     * 次のギフトへ進む。
+     */
+    function finishPlayback() {
+
+        if (finished) {
+            return;
+        }
+
+        finished =
+            true;
+
+        giftAudioPlaying =
+            false;
+
+        if (
+            giftAudio === audio
+        ) {
+
+            giftAudio =
+                null;
+        }
+
+        audio.onended =
+            null;
+
+        audio.onerror =
+            null;
+
+        /*
+         * ほんの少しだけ間隔を空けて
+         * 次の音声を再生。
+         *
+         * 大量ギフトでも
+         * 音が重ならない。
+         */
+        setTimeout(
+            processGiftAudioQueue,
+            20
+        );
+    }
+
+
+    audio.onended =
+        finishPlayback;
+
+    audio.onerror =
+        function (error) {
+
+            console.warn(
+                '[DEBUG] Gift audio playback error:',
+                error
+            );
+
+            finishPlayback();
+        };
+
+
+    try {
 
         const promise =
             audio.play();
@@ -1441,6 +1799,24 @@ function playGiftSound() {
                         '[DEBUG] Gift audio playback blocked:',
                         error
                     );
+
+                    /*
+                     * 自動再生制限などで
+                     * 再生できなかった場合。
+                     *
+                     * 音声をキューの先頭に戻す。
+                     */
+                    if (
+                        giftAudioEnabled &&
+                        !giftAudioUnlocked
+                    ) {
+
+                        giftAudioQueue.unshift(
+                            soundUrl
+                        );
+                    }
+
+                    finishPlayback();
                 }
             );
         }
@@ -1451,7 +1827,33 @@ function playGiftSound() {
             '[DEBUG] Gift audio error:',
             e
         );
+
+        if (
+            giftAudioEnabled &&
+            !giftAudioUnlocked
+        ) {
+
+            giftAudioQueue.unshift(
+                soundUrl
+            );
+        }
+
+        finishPlayback();
     }
+}
+
+
+/* =========================================================
+   GIFT AUDIO PLAY
+========================================================= */
+
+function playGiftSound() {
+
+    /*
+     * 実際には直接再生せず、
+     * 再生キューへ入れる。
+     */
+    addGiftAudioToQueue();
 }
 
 
@@ -1724,6 +2126,7 @@ function addGiftItem(data) {
                                     'コスト: <b>' +
                                     cost.toLocaleString() +
                                     ' Diamonds</b>' +
+
                                     '</span>' +
 
                                 '</td>' +
@@ -2205,6 +2608,10 @@ connection.on(
             return;
         }
 
+        /*
+         * 実際のコメントだけが
+         * いいね表示の抑制を解除する。
+         */
         likeMessageDisplayed =
             false;
 
@@ -2263,6 +2670,10 @@ connection.on(
             data
         );
 
+        /*
+         * 音声は直接再生せず、
+         * 再生待ちキューへ入れる。
+         */
         playGiftSound();
     }
 );
