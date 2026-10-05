@@ -6,212 +6,136 @@ class TikTokIOConnection {
       backendUrl ||
       'https://sacrifice-nico.com';
     
-    this.socket =
-      io(this.backendUrl, {
-        path: '/socket.io/',
-        transports: [
-          'polling',
-          'websocket'
-        ],
-        upgrade: true,
-        reconnection: true
-      });
+    this.socket = io(this.backendUrl, {
+      path: '/socket.io/',
+      transports: ['polling', 'websocket'],
+      upgrade: true,
+      reconnection: true
+    });
     
     this.uniqueId = null;
     this.options = null;
     
-    
-    this.socket.on(
-      'connect',
-      () => {
-        
-        console.info(
-          'Socket connected:',
-          this.socket.id
-        );
-        
-        
-        if (this.uniqueId) {
-          this.setUniqueId();
-        }
+    this.socket.on('connect', () => {
+      
+      console.info(
+        'Socket connected:',
+        this.socket.id
+      );
+      
+      if (this.uniqueId) {
+        this.setUniqueId();
       }
-    );
+    });
     
+    this.socket.on('disconnect', (reason) => {
+      
+      console.warn(
+        'Socket disconnected:',
+        reason
+      );
+    });
     
-    this.socket.on(
-      'disconnect',
-      (reason) => {
-        
-        console.warn(
-          'Socket disconnected:',
-          reason
-        );
-      }
-    );
+    this.socket.on('connect_error', (error) => {
+      
+      console.error(
+        'Socket connection error:',
+        error
+      );
+    });
     
+    this.socket.on('streamEnd', () => {
+      
+      this.uniqueId = null;
+    });
     
-    this.socket.on(
-      'connect_error',
-      (error) => {
-        
-        console.error(
-          'Socket connection error:',
-          error
-        );
-      }
-    );
-    
-    
-    this.socket.on(
-      'streamEnd',
-      () => {
-        
+    this.socket.on('tiktokDisconnected', (errMsg) => {
+      
+      console.warn(errMsg);
+      
+      if (
+        errMsg &&
+        String(errMsg).includes('LIVE has ended')
+      ) {
         this.uniqueId = null;
       }
-    );
-    
-    
-    this.socket.on(
-      'tiktokDisconnected',
-      (errMsg) => {
-        
-        console.warn(
-          errMsg
-        );
-        
-        
-        if (
-          errMsg &&
-          String(
-            errMsg
-          ).includes(
-            'LIVE has ended'
-          )
-        ) {
-          
-          this.uniqueId = null;
-        }
-      }
-    );
+    });
   }
   
-  
-  connect(
-    uniqueId,
-    options
-  ) {
+  connect(uniqueId, options) {
     
-    this.uniqueId =
-      uniqueId;
-    
-    this.options =
-      options || {};
-    
+    this.uniqueId = uniqueId;
+    this.options = options || {};
     
     this.setUniqueId();
     
-    
-    return new Promise(
-      (
-        resolve,
-        reject
-      ) => {
+    return new Promise((resolve, reject) => {
+      
+      let settled = false;
+      
+      const handleConnected = (data) => {
         
-        let settled =
-          false;
+        if (settled) {
+          return;
+        }
         
+        settled = true;
         
-        const handleConnected =
-          (data) => {
-            
-            if (settled) {
-              return;
-            }
-            
-            
-            settled = true;
-            
-            clearTimeout(
-              timeoutId
-            );
-            
-            
-            resolve(data);
-          };
+        clearTimeout(timeoutId);
         
+        resolve(data);
+      };
+      
+      const handleDisconnected = (error) => {
         
-        const handleDisconnected =
-          (error) => {
-            
-            if (settled) {
-              return;
-            }
-            
-            
-            settled = true;
-            
-            clearTimeout(
-              timeoutId
-            );
-            
-            
-            reject(error);
-          };
+        if (settled) {
+          return;
+        }
         
+        settled = true;
         
-        this.socket.once(
+        clearTimeout(timeoutId);
+        
+        reject(error);
+      };
+      
+      this.socket.once(
+        'tiktokConnected',
+        handleConnected
+      );
+      
+      this.socket.once(
+        'tiktokDisconnected',
+        handleDisconnected
+      );
+      
+      const timeoutId = setTimeout(() => {
+        
+        if (settled) {
+          return;
+        }
+        
+        settled = true;
+        
+        this.socket.off(
           'tiktokConnected',
           handleConnected
         );
         
-        
-        this.socket.once(
+        this.socket.off(
           'tiktokDisconnected',
           handleDisconnected
         );
         
+        reject('Connection Timeout');
         
-        const timeoutId =
-          setTimeout(
-            () => {
-              
-              if (settled) {
-                return;
-              }
-              
-              
-              settled = true;
-              
-              
-              this.socket.off(
-                'tiktokConnected',
-                handleConnected
-              );
-              
-              
-              this.socket.off(
-                'tiktokDisconnected',
-                handleDisconnected
-              );
-              
-              
-              reject(
-                'Connection Timeout'
-              );
-              
-            },
-            15000
-          );
-      }
-    );
+      }, 15000);
+    });
   }
-  
   
   setUniqueId() {
     
-    if (
-      !this.socket.connected
-    ) {
+    if (!this.socket.connected) {
       
       console.warn(
         'Socket is not connected yet.'
@@ -220,7 +144,6 @@ class TikTokIOConnection {
       return;
     }
     
-    
     this.socket.emit(
       'setUniqueId',
       this.uniqueId,
@@ -228,11 +151,7 @@ class TikTokIOConnection {
     );
   }
   
-  
-  on(
-    eventName,
-    eventHandler
-  ) {
+  on(eventName, eventHandler) {
     
     this.socket.on(
       eventName,

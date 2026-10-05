@@ -2,14 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta
-        http-equiv="X-UA-Compatible"
-        content="IE=edge"
-    >
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>TikTok LIVE コメントビューアー</title>
 
@@ -18,15 +12,8 @@
         content="TikTok LIVE コメントビューアー"
     >
 
-    <link
-        rel="icon"
-        href="favicon.ico"
-    >
-
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="style.css">
 
     <script
         src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
@@ -42,45 +29,11 @@
 
     <script src="connection.js"></script>
     <script src="app.js"></script>
-
-    <script>
-        function generateOverlay() {
-
-            let username =
-                $('#uniqueIdInput').val();
-
-            let url =
-                `/obs.html?username=${encodeURIComponent(username)}` +
-                `&showLikes=1` +
-                `&showChats=1` +
-                `&showGifts=1` +
-                `&showFollows=1` +
-                `&showJoins=1` +
-                `&bgColor=rgb(18,18,22)` +
-                `&fontColor=rgb(232,232,238)` +
-                `&fontSize=1.3em`;
-
-            if (username) {
-
-                window.open(
-                    url,
-                    '_blank'
-                );
-
-            } else {
-
-                alert(
-                    'ユーザーIDを入力してください。'
-                );
-            }
-        }
-    </script>
 </head>
 
 <body>
 
     <header class="head">
-
         <div class="headerTitle">
             TikTok LIVE コメントビューアー
         </div>
@@ -89,125 +42,101 @@
             id="viewerMenuButton"
             class="viewerMenuButton"
             type="button"
-            aria-label="視聴者メニュー"
-        >
-            <span></span>
-            <span></span>
-            <span></span>
+            aria-label="視聴者一覧">
+            ☰
         </button>
-
     </header>
 
+    <main>
 
-    <div class="inputFields">
+        <div class="inputFields">
 
-        <input
-            type="text"
-            id="uniqueIdInput"
-            placeholder="ユーザーIDかURLを入力..."
-            autocomplete="off"
-        >
+            <input
+                type="text"
+                id="uniqueIdInput"
+                placeholder="ユーザーID または URL"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false">
 
-        <button
-            id="copyQueryButton"
-            type="button"
-            class="copyQueryButton"
-        >
-            🔗 コピー
-        </button>
+            <button
+                id="copyQueryButton"
+                type="button">
+                URLコピー
+            </button>
 
-        <button
-            id="connectButton"
-            type="button"
-        >
-            接続
-        </button>
-
-    </div>
-
-
-    <div class="statusBar">
-
-        <pre id="stateText"></pre>
-
-        <div id="roomStats"></div>
-
-    </div>
-
-
-    <div class="mainContent">
-
-        <div class="chatcontainer">
-
-            <h3 class="containerheader">
-                チャット
-            </h3>
+            <button
+                id="connectButton"
+                type="button">
+                接続
+            </button>
 
         </div>
 
+        <div class="statusBar">
 
-        <div class="giftcontainer">
+            <pre id="stateText"></pre>
 
-            <h3 class="containerheader">
-                ギフト
-            </h3>
+            <div id="roomStats"></div>
 
         </div>
 
-    </div>
+        <div class="mainContent">
 
+            <section class="chatcontainer">
+                <h3 class="containerheader">
+                    チャット
+                </h3>
+            </section>
 
+            <section class="giftcontainer">
+                <h3 class="containerheader">
+                    ギフト
+                </h3>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- 視聴者一覧オーバーレイ -->
     <div
         id="viewerMenuOverlay"
-        class="viewerMenuOverlay"
-    ></div>
+        class="viewerMenuOverlay">
+    </div>
 
-
+    <!-- 視聴者一覧 -->
     <aside
         id="viewerMenu"
-        class="viewerMenu"
-        aria-hidden="true"
-    >
+        class="viewerMenu">
 
         <div class="viewerMenuHeader">
 
             <div>
-
                 <div class="viewerMenuTitle">
-                    視聴者
+                    視聴者一覧
                 </div>
 
                 <div
                     id="viewerMenuCount"
-                    class="viewerMenuCount"
-                >
+                    class="viewerMenuCount">
                     0人
                 </div>
-
             </div>
-
 
             <button
                 id="viewerMenuClose"
                 class="viewerMenuClose"
                 type="button"
-                aria-label="閉じる"
-            >
+                aria-label="閉じる">
                 ×
             </button>
 
         </div>
 
-
         <div
             id="viewerList"
-            class="viewerList"
-        >
-
-            <div class="viewerEmpty">
-                まだ視聴者情報がありません
-            </div>
-
+            class="viewerList">
         </div>
 
     </aside>
