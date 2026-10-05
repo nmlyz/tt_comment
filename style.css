@@ -679,7 +679,7 @@ main {
          * チャット : ギフト = 7 : 3
          * つまり 3.5 : 1.5
          */
-        grid-template-rows: 7fr 3fr;
+        grid-template-rows: 6.8fr 3.2fr;
 
         padding: 0 6px 2px 6px;
 
