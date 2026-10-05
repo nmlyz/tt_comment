@@ -16,18 +16,14 @@ let recentComments = [];
 
 const COMMENT_DUPLICATE_WINDOW = 3000;
 
-/*
- * いいね表示の重複防止。
- *
- * false
- * = 次に来たいいねを表示してよい
- *
- * true
- * = すでにいいねを表示済み。
- *     次のチャットが来るまで
- *     いいね表示をスキップする
- */
 let likeMessageDisplayed = false;
+
+/*
+ * roomUser.ranks が同じ視聴者だけを
+ * 繰り返し送ってくる場合でも、
+ * 以前取得した視聴者を保持する。
+ */
+let viewerMap = new Map();
 
 if (!window.settings) {
     window.settings = {};
@@ -133,7 +129,12 @@ $(document).ready(() => {
 
     loadUrlSettings();
 
-    $('#connectButton').click(connect);
+    $('#connectButton').click(() => {
+
+        unlockGiftAudio();
+
+        connect();
+    });
 
     $('#copyQueryButton').click(
         copyQueryLink
@@ -144,8 +145,19 @@ $(document).ready(() => {
         function (event) {
 
             if (event.key === 'Enter') {
+
+                unlockGiftAudio();
+
                 connect();
             }
+        }
+    );
+
+    $('#uniqueIdInput').on(
+        'focus',
+        function () {
+
+            unlockGiftAudio();
         }
     );
 
@@ -213,10 +225,8 @@ function connect() {
 
             currentViewers = [];
 
-            /*
-             * 新しい接続では
-             * いいね表示状態もリセット。
-             */
+            viewerMap.clear();
+
             likeMessageDisplayed = false;
 
             updateRoomStats();
@@ -344,7 +354,7 @@ function fallbackCopyText(text) {
     } catch (error) {
 
         alert(
-            'コピーできませんでした.\n\n' +
+            'コピーできませんでした。\n\n' +
             text
         );
     }
@@ -973,6 +983,7 @@ function addGiftItem(data) {
 ========================================================= */
 
 let giftAudio = null;
+let giftAudioUnlocked = false;
 
 
 function prepareGiftAudio() {
@@ -992,7 +1003,95 @@ function prepareGiftAudio() {
 }
 
 
+/*
+ * iPhone / iPadのブラウザでは、
+ * ユーザー操作なしで作ったAudioは
+ * 後からplay()できない場合がある。
+ *
+ * そこで接続ボタン・入力欄などの
+ * ユーザー操作時に一度だけ
+ * ミュート状態で再生して停止し、
+ * 音声をアンロックする。
+ *
+ * ここでは音を出さない。
+ */
+function unlockGiftAudio() {
+
+    if (giftAudioUnlocked) {
+        return;
+    }
+
+    prepareGiftAudio();
+
+    if (!giftAudio) {
+        return;
+    }
+
+    try {
+
+        giftAudio.muted = true;
+
+        const promise =
+            giftAudio.play();
+
+        if (
+            promise &&
+            typeof promise.then ===
+                'function'
+        {
+
+            promise.then(() => {
+
+                giftAudio.pause();
+
+                giftAudio.currentTime =
+                    0;
+
+                giftAudio.muted =
+                    false;
+
+                giftAudioUnlocked =
+                    true;
+
+            }).catch(() => {
+
+                giftAudio.muted =
+                    false;
+            });
+
+        } else {
+
+            giftAudio.pause();
+
+            giftAudio.currentTime =
+                0;
+
+            giftAudio.muted =
+                false;
+
+            giftAudioUnlocked =
+                true;
+        }
+
+    } catch (error) {
+
+        giftAudio.muted =
+            false;
+
+        console.warn(
+            'Gift audio unlock failed:',
+            error
+        );
+    }
+}
+
+
 function playGiftSound() {
+
+    /*
+     * 実際のgiftイベントからのみ
+     * 呼び出される。
+     */
 
     if (!giftAudio) {
         prepareGiftAudio();
@@ -1005,6 +1104,7 @@ function playGiftSound() {
     try {
 
         giftAudio.currentTime = 0;
+        giftAudio.muted = false;
 
         const playPromise =
             giftAudio.play();
@@ -1049,24 +1149,40 @@ function updateViewersFromRoomUser(
         !Array.isArray(msg.ranks)
     ) {
 
-        currentViewers = [];
-
         updateViewerMenu();
 
         return;
     }
 
-    currentViewers =
-        msg.ranks.map(
-            (item) => {
+    /*
+     * 今回のroomUserで届いた人を
+     * Mapへ追加・更新する。
+     *
+     * 以前の一覧を毎回空にしない。
+     */
+    msg.ranks.forEach(
+        (item) => {
 
-                const user =
-                    item &&
-                    item.user
-                        ? item.user
-                        : {};
+            if (!item) {
+                return;
+            }
 
-                return {
+            const user =
+                item.user || {};
+
+            const id =
+                user.id ||
+                user.idStr ||
+                user.displayId ||
+                '';
+
+            if (!id) {
+                return;
+            }
+
+            viewerMap.set(
+                String(id),
+                {
                     id:
                         user.id ||
                         user.idStr ||
@@ -1092,9 +1208,41 @@ function updateViewersFromRoomUser(
 
                     score:
                         item.score
-                };
-            }
+                }
+            );
+        }
+    );
+
+    currentViewers =
+        Array.from(
+            viewerMap.values()
         );
+
+    /*
+     * rankが存在する場合は
+     * rank順に並べる。
+     *
+     * rankがない場合は取得順を維持。
+     */
+    currentViewers.sort(
+        (a, b) => {
+
+            const rankA =
+                Number(a.rank);
+
+            const rankB =
+                Number(b.rank);
+
+            if (
+                Number.isNaN(rankA) ||
+                Number.isNaN(rankB)
+            ) {
+                return 0;
+            }
+
+            return rankA - rankB;
+        }
+    );
 
     updateViewerMenu();
 }
@@ -1307,12 +1455,8 @@ connection.on(
     (msg) => {
 
         /*
-         * 実際のチャットイベントが来たら
-         * いいね表示の連続状態を解除。
-         *
-         * showChats=0でも、
-         * 「コメントイベントが来た」という
-         * 条件自体は成立させる。
+         * 本物のchatイベントが来たら
+         * いいね表示の抑制を解除。
          */
         likeMessageDisplayed = false;
 
@@ -1358,8 +1502,8 @@ connection.on(
         );
 
         /*
-         * 実際にgiftイベントが来た時だけ
-         * 音を鳴らす。
+         * 実際のgiftイベント受信時だけ
+         * 音を再生。
          */
         playGiftSound();
 
@@ -1451,8 +1595,7 @@ connection.on(
     (data) => {
 
         /*
-         * いいね数の集計は今まで通り。
-         * 表示だけ連続重複を防止する。
+         * いいね数の集計は変更しない。
          */
         likeCount +=
             Number(
@@ -1464,12 +1607,9 @@ connection.on(
         updateRoomStats();
 
         /*
-         * 直前のいいね表示から
-         * チャットが来ていない場合は
-         * 2個目以降を表示しない。
-         *
-         * member / gift / social は
-         * リセット条件にしない。
+         * 前回のいいね表示後に
+         * チャットが来ていなければ
+         * 今回の表示をスキップ。
          */
         if (
             likeMessageDisplayed
@@ -1484,11 +1624,6 @@ connection.on(
             return;
         }
 
-        /*
-         * showLikes=0の場合は
-         * 表示していないので、
-         * 連続いいね状態にはしない。
-         */
         if (
             window.settings.showLikes ===
             '0'
@@ -1502,13 +1637,8 @@ connection.on(
             'ライブにいいねされました'
         );
 
-        /*
-         * 今回のいいねを表示済みにする。
-         *
-         * 次にリセットされるのは
-         * 「chatイベント」が来た時だけ。
-         */
-        likeMessageDisplayed = true;
+        likeMessageDisplayed =
+            true;
     }
 );
 
@@ -1527,7 +1657,10 @@ connection.on(
 
         currentViewers = [];
 
-        likeMessageDisplayed = false;
+        viewerMap.clear();
+
+        likeMessageDisplayed =
+            false;
 
         updateViewerMenu();
 
