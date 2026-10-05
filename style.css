@@ -2,25 +2,33 @@
     box-sizing: border-box;
 }
 
-html,
-body {
-    margin: 0;
-    padding: 0;
+html {
     width: 100%;
     height: 100%;
+    min-height: 0;
 }
 
 body {
+    margin: 0;
+    padding: 0;
+
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+
     background: #18171c;
     color: #e3e5eb;
+
     font-family:
         -apple-system,
         BlinkMacSystemFont,
         "Helvetica Neue",
         Arial,
         sans-serif;
-    font-size: 14px;
+
     overflow: hidden;
+
+    -webkit-text-size-adjust: 100%;
 }
 
 button,
@@ -28,142 +36,214 @@ input {
     font-family: inherit;
 }
 
-button {
-    -webkit-tap-highlight-color: transparent;
-}
-
 .head {
-    height: 42px;
+    position: relative;
+
+    width: 100%;
+    height: 48px;
+
+    flex-shrink: 0;
+
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    padding: 5px 8px;
-    background: #242329;
-    border-bottom: 1px solid #3a3940;
+
+    padding: 0 12px;
+
+    background: #202025;
+    border-bottom: 1px solid #36353b;
 }
 
 .viewerMenuButton {
     width: 38px;
-    height: 32px;
+    height: 36px;
+
+    padding: 0;
+
     border: 0;
-    border-radius: 7px;
-    background: #3a393f;
+    border-radius: 8px;
+
+    background: #2c2c32;
     color: #e3e5eb;
-    font-size: 21px;
-    line-height: 32px;
+
+    font-size: 22px;
+    line-height: 36px;
+
     cursor: pointer;
 }
 
-main {
+.viewerMenuButton:active {
+    background: #3a3a40;
+}
+
+.page {
     width: 100%;
-    height: calc(100% - 42px);
+    height: calc(100% - 48px);
+
+    min-height: 0;
+
     display: flex;
     flex-direction: column;
-    min-height: 0;
+
+    padding: 10px;
+
+    overflow: hidden;
+}
+
+.topArea {
+    width: 100%;
+
+    flex-shrink: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 7px;
+
+    margin-bottom: 8px;
 }
 
 .inputFields {
-    padding: 8px;
-    background: #202025;
-    border-bottom: 1px solid #35343a;
-    flex-shrink: 0;
-}
-
-.inputRow {
     width: 100%;
+
     display: flex;
-    align-items: center;
+    align-items: stretch;
+
     gap: 6px;
 }
 
 #uniqueIdInput {
     flex: 1;
     min-width: 0;
-    height: 38px;
-    padding: 0 11px;
-    border: 1px solid #4a494f;
-    border-radius: 7px;
+
+    height: 42px;
+
+    padding: 0 12px;
+
+    border: 1px solid #44434a;
+    border-radius: 8px;
+
     outline: none;
-    background: #303035;
-    color: #f1f1f3;
-    font-size: 14px;
+
+    background: #2c2c32;
+    color: #e3e5eb;
+
+    font-size: 15px;
 }
 
 #uniqueIdInput::placeholder {
-    color: #9b9ba2;
+    color: #9b9ba3;
 }
 
 #uniqueIdInput:focus {
-    border-color: #697080;
+    border-color: #66656e;
 }
 
 #copyUrlButton {
     flex-shrink: 0;
-    height: 38px;
-    padding: 0 11px;
-    border: 0;
-    border-radius: 7px;
-    background: #3e414a;
-    color: #f0f1f4;
+
+    height: 42px;
+
+    padding: 0 12px;
+
+    border: 1px solid #45444b;
+    border-radius: 8px;
+
+    background: #35343b;
+    color: #e3e5eb;
+
     font-size: 13px;
+
     cursor: pointer;
+}
+
+#copyUrlButton:active {
+    background: #44434b;
 }
 
 #connectButton {
     width: 100%;
-    height: 38px;
-    margin-top: 6px;
+    height: 40px;
+
+    flex-shrink: 0;
+
     border: 0;
-    border-radius: 7px;
-    background: #4b5362;
+    border-radius: 8px;
+
+    background: #4a4a52;
     color: #ffffff;
-    font-size: 14px;
+
+    font-size: 15px;
     font-weight: 600;
+
     cursor: pointer;
 }
 
-#connectButton:active,
-#copyUrlButton:active,
-.viewerMenuButton:active {
-    opacity: 0.75;
+#connectButton:active {
+    background: #5a5a63;
 }
 
 .statusBar {
-    min-height: 36px;
-    padding: 5px 9px;
-    background: #1f1e23;
-    border-bottom: 1px solid #35343a;
+    width: 100%;
+
+    flex-shrink: 0;
+
+    min-height: 35px;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
+
     gap: 8px;
-    flex-shrink: 0;
+
+    margin-bottom: 8px;
+    padding: 6px 9px;
+
+    background: #202025;
+    border: 1px solid #36353b;
+    border-radius: 8px;
+
+    overflow: hidden;
 }
 
 #stateText {
+    flex: 1;
+
+    min-width: 0;
+
     margin: 0;
-    padding: 0;
-    color: #bfc2ca;
+
+    color: #bfc1c8;
+
     font-size: 12px;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #roomStats {
     flex-shrink: 0;
-    color: #c9cbd1;
-    font-size: 12px;
-    text-align: right;
+
+    color: #aeb0b8;
+
+    font-size: 11px;
+
     white-space: nowrap;
 }
 
 .mainContent {
-    flex: 1;
+    width: 100%;
+
+    flex: 1 1 auto;
+
     min-height: 0;
+
     display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(210px, 0.5fr);
-    gap: 6px;
-    padding: 6px;
+
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 32%);
+
+    gap: 8px;
+
     overflow: hidden;
 }
 
@@ -171,12 +251,22 @@ main {
 .giftcontainer {
     min-width: 0;
     min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
+
+    height: 100%;
+
     background: #202025;
+
     border: 1px solid #36353b;
     border-radius: 8px;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
     -webkit-overflow-scrolling: touch;
+
+    overscroll-behavior: contain;
+
+    scrollbar-width: thin;
 }
 
 .chatcontainer {
@@ -188,146 +278,120 @@ main {
     display: flex;
     flex-direction: column;
 
-    /* ギフト欄だけ独立してスクロール */
-    overflow-y: auto;
     overflow-x: hidden;
+    overflow-y: auto;
 
-    /* iPhone / iPadでの慣性スクロール */
+    min-height: 0;
+    height: 100%;
+
     -webkit-overflow-scrolling: touch;
 
-    /* スクロール領域を確実に確保 */
-    min-height: 0;
-    max-height: 100%;
+    overscroll-behavior: contain;
 }
 
 .containerheader {
     position: sticky;
     top: 0;
+
     z-index: 2;
+
     flex-shrink: 0;
+
     margin: 0;
+
     padding: 7px 9px;
-    background: #2a292f;
-    border-bottom: 1px solid #3a3940;
-    color: #dfe1e7;
-    font-size: 13px;
+
+    background: #29282e;
+    color: #d9dbe1;
+
+    border-bottom: 1px solid #3a393f;
+
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .chatcontainer > div,
 .giftcontainer > div {
-    min-width: 0;
+    flex-shrink: 0;
 }
 
 .chatcontainer > div {
     display: flex;
     align-items: flex-start;
+
     gap: 7px;
-    padding: 5px 7px;
+
+    padding: 6px 8px;
+
     border-bottom: 1px solid rgba(255, 255, 255, 0.035);
-    line-height: 1.4;
+
+    font-size: 13px;
+
+    line-height: 1.35;
 }
 
 .giftcontainer > div {
-    min-width: 0;
-    width: calc(100% - 8px);
-    margin: 4px 4px 5px 4px;
-    padding: 5px 6px;
-    background: #29282e;
-    border-radius: 6px;
-    border: 1px solid #39383e;
-    overflow: hidden;
+    padding: 5px 7px;
+    margin-bottom: 3px;
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.035);
+
+    font-size: 11px;
+
     line-height: 1.25;
 }
 
 .miniprofilepicture {
     width: 30px;
     height: 30px;
-    flex: 0 0 30px;
+
+    flex-shrink: 0;
+
     border-radius: 50%;
+
     object-fit: cover;
-    background: #3a393f;
+
+    background: #333238;
 }
 
 .giftcontainer .miniprofilepicture {
-    width: 24px;
-    height: 24px;
-    flex-basis: 24px;
+    width: 27px;
+    height: 27px;
 }
 
 .usernamelink {
-    color: #8ea8df;
+    color: #8faee8;
+
     text-decoration: none;
 }
 
-.giftcontainer > div > span,
-.giftcontainer > div span {
-    min-width: 0;
-}
-
-.giftcontainer table {
-    width: 100%;
-    max-width: 100%;
-    table-layout: fixed;
-    border-collapse: collapse;
-    margin-top: 3px;
-}
-
-.giftcontainer td {
-    padding: 0;
-    vertical-align: middle;
-}
-
-.giftcontainer td:first-child {
-    width: 40px;
-    padding-right: 5px;
-}
-
-.giftcontainer td:last-child {
-    min-width: 0;
-    width: auto;
-    overflow: hidden;
+.usernamelink:hover {
+    text-decoration: underline;
 }
 
 .gifticon {
-    display: block;
     width: 34px;
     height: 34px;
-    max-width: 34px;
-    max-height: 34px;
+
     object-fit: contain;
+
+    display: block;
 }
 
-.giftcontainer table span {
-    display: inline-block;
-    max-width: 100%;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-}
-
-.giftcontainer .giftTitle {
-    font-size: 11px;
-    line-height: 1.25;
-}
-
-.giftcontainer .giftDetail {
+.giftTitle {
     font-size: 10px;
-    line-height: 1.25;
-    color: #c7c8ce;
+    line-height: 1.2;
 }
 
-.giftcontainer .giftDetail b {
-    color: #e5e6ea;
+.giftDetail {
+    font-size: 9px;
+    line-height: 1.2;
 }
 
-.eventcontainer {
-    width: 100%;
-    min-height: 100%;
-    overflow: hidden;
-}
-
-.eventcontainer > div {
-    max-width: 100%;
-    overflow-wrap: anywhere;
+.giftTime {
+    color: #85858e;
+    font-size: 9px;
+    white-space: nowrap;
 }
 
 .splitstatetable {
@@ -336,193 +400,268 @@ main {
 }
 
 .splitstatetable td {
-    padding: 4px;
-    vertical-align: middle;
+    padding: 3px 5px;
 }
 
-.viewerSideMenu {
+.eventcontainer {
+    width: 100%;
+    height: calc(100vh - 10px);
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    min-height: 0;
+
+    -webkit-overflow-scrolling: touch;
+}
+
+.eventcontainer > div {
+    margin-top: 5px;
+}
+
+.viewerOverlay {
     position: fixed;
-    z-index: 1000;
+
+    inset: 0;
+
+    z-index: 90;
+
+    background: rgba(0, 0, 0, 0.45);
+
+    display: none;
+}
+
+.viewerOverlay.open {
+    display: block;
+}
+
+.viewerMenu {
+    position: fixed;
+
     top: 0;
-    right: 0;
-    width: min(320px, 82vw);
+    left: 0;
+
+    width: min(320px, 85vw);
     height: 100%;
-    background: #222127;
-    border-left: 1px solid #3b3a41;
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
-    transform: translateX(100%);
-    transition: transform 0.2s ease;
+
+    z-index: 100;
+
     display: flex;
     flex-direction: column;
+
+    background: #202025;
+
+    border-right: 1px solid #3b3a40;
+
+    transform: translateX(-100%);
+
+    transition: transform 0.2s ease;
+
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
+
+    min-height: 0;
 }
 
-.viewerSideMenu.open {
+.viewerMenu.open {
     transform: translateX(0);
 }
 
 .viewerMenuHeader {
-    height: 46px;
+    height: 48px;
+
     flex-shrink: 0;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 10px;
-    background: #2a292f;
-    border-bottom: 1px solid #3b3a41;
+
+    padding: 0 12px;
+
+    border-bottom: 1px solid #3a393f;
+
+    font-size: 15px;
     font-weight: 600;
 }
 
-#viewerMenuClose {
-    width: 32px;
-    height: 32px;
+.viewerMenuHeader button {
+    width: 34px;
+    height: 34px;
+
+    padding: 0;
+
     border: 0;
-    border-radius: 6px;
-    background: #3a393f;
-    color: #e5e6ea;
-    font-size: 21px;
+    border-radius: 7px;
+
+    background: #303037;
+    color: #e3e5eb;
+
+    font-size: 23px;
+    line-height: 34px;
 }
 
 .viewerCountText {
-    padding: 8px 10px;
-    color: #bfc1c8;
+    flex-shrink: 0;
+
+    padding: 9px 12px;
+
+    color: #aeb0b8;
+
     font-size: 12px;
-    border-bottom: 1px solid #35343a;
+
+    border-bottom: 1px solid #343339;
 }
 
 .viewerList {
-    flex: 1;
+    flex: 1 1 auto;
+
     min-height: 0;
+
+    overflow-x: hidden;
     overflow-y: auto;
-    padding: 5px;
+
+    -webkit-overflow-scrolling: touch;
+
+    padding: 5px 0;
 }
 
 .viewerItem {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px;
-    border-radius: 6px;
+
+    gap: 9px;
+
+    min-height: 48px;
+
+    padding: 6px 11px;
 }
 
 .viewerItem:hover {
-    background: #2e2d33;
+    background: #2a292f;
 }
 
-.viewerItem img {
-    width: 30px;
-    height: 30px;
-    flex: 0 0 30px;
+.viewerItemPicture {
+    width: 34px;
+    height: 34px;
+
+    flex-shrink: 0;
+
     border-radius: 50%;
+
     object-fit: cover;
+
+    background: #333238;
 }
 
 .viewerItemText {
     min-width: 0;
-    overflow: hidden;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 1px;
 }
 
-.viewerItemNickname {
-    color: #e3e4e8;
-    font-size: 13px;
-    white-space: nowrap;
+.viewerItemName {
     overflow: hidden;
+
+    white-space: nowrap;
     text-overflow: ellipsis;
+
+    color: #e4e5ea;
+
+    font-size: 13px;
 }
 
 .viewerItemId {
-    color: #92949c;
-    font-size: 10px;
-    white-space: nowrap;
     overflow: hidden;
+
+    white-space: nowrap;
     text-overflow: ellipsis;
-}
 
-.viewerMenuOverlay {
-    position: fixed;
-    z-index: 999;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.35);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
-}
+    color: #85858e;
 
-.viewerMenuOverlay.open {
-    opacity: 1;
-    pointer-events: auto;
+    font-size: 10px;
 }
 
 @media (max-width: 700px) {
 
+    .page {
+        padding: 8px;
+    }
+
     .mainContent {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: minmax(0, 1.55fr) minmax(130px, 0.45fr);
+        grid-template-columns: minmax(0, 1fr) minmax(125px, 34%);
+        gap: 6px;
     }
 
-    .giftcontainer {
-        min-height: 130px;
-        max-height: 100%;
-    }
-
-    .giftcontainer > div {
-        width: calc(100% - 6px);
-        margin-left: 3px;
-        margin-right: 3px;
-    }
-
-    .gifticon {
-        width: 32px;
-        height: 32px;
-        max-width: 32px;
-        max-height: 32px;
-    }
-
-    .giftcontainer td:first-child {
-        width: 37px;
-    }
-
-    #roomStats {
-        font-size: 10px;
-    }
-}
-
-@media (max-width: 420px) {
-
-    .inputRow {
-        gap: 5px;
-    }
-
-    #copyUrlButton {
-        padding: 0 8px;
+    .chatcontainer > div {
         font-size: 12px;
-    }
-
-    .mainContent {
-        padding: 4px;
-        gap: 4px;
     }
 
     .giftcontainer > div {
         padding: 4px 5px;
-    }
+        margin-bottom: 3px;
 
-    .giftcontainer .giftTitle {
         font-size: 10px;
-    }
-
-    .giftcontainer .giftDetail {
-        font-size: 9px;
     }
 
     .gifticon {
         width: 30px;
         height: 30px;
-        max-width: 30px;
-        max-height: 30px;
     }
 
-    .giftcontainer td:first-child {
-        width: 35px;
-        padding-right: 4px;
+    .giftcontainer .miniprofilepicture {
+        width: 25px;
+        height: 25px;
+    }
+
+    .giftTitle {
+        font-size: 9px;
+    }
+
+    .giftDetail {
+        font-size: 8px;
+    }
+
+    .giftTime {
+        font-size: 8px;
+    }
+
+    #roomStats {
+        font-size: 9px;
+    }
+}
+
+@media (max-width: 430px) {
+
+    .mainContent {
+        grid-template-columns: minmax(0, 1fr) minmax(110px, 33%);
+        gap: 5px;
+    }
+
+    .page {
+        padding: 6px;
+    }
+
+    .inputFields {
+        gap: 5px;
+    }
+
+    #uniqueIdInput {
+        font-size: 14px;
+    }
+
+    #copyUrlButton {
+        padding: 0 9px;
+        font-size: 12px;
+    }
+
+    .giftcontainer > div {
+        padding: 4px;
+    }
+
+    .gifticon {
+        width: 28px;
+        height: 28px;
     }
 }

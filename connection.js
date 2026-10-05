@@ -2,14 +2,18 @@ class TikTokIOConnection {
   
   constructor(backendUrl) {
     
-    this.backendUrl = backendUrl || "https://sacrifice-nico.com";
+    this.backendUrl =
+      backendUrl ||
+      "https://sacrifice-nico.com";
     
     this.socket = io(this.backendUrl, {
       transports: ["polling", "websocket"],
+      upgrade: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000
+      reconnectionDelayMax: 5000,
+      timeout: 15000
     });
     
     this.uniqueId = null;
@@ -41,7 +45,7 @@ class TikTokIOConnection {
       
       if (
         errMsg &&
-        String(errMsg).includes('LIVE has ended')
+        errMsg.includes('LIVE has ended')
       ) {
         this.uniqueId = null;
       }
@@ -57,61 +61,69 @@ class TikTokIOConnection {
     
     return new Promise((resolve, reject) => {
       
-      let finished = false;
+      let settled = false;
       
       const cleanup = () => {
-        
         this.socket.off('tiktokConnected', onConnected);
         this.socket.off('tiktokDisconnected', onDisconnected);
-        
-        clearTimeout(timeoutId);
+        clearTimeout(timer);
       };
       
       const onConnected = (state) => {
         
-        if (finished) {
+        if (settled) {
           return;
         }
         
-        finished = true;
+        settled = true;
+        
         cleanup();
         
         resolve(state);
       };
       
-      const onDisconnected = (errorMessage) => {
+      const onDisconnected = (error) => {
         
-        if (finished) {
+        if (settled) {
           return;
         }
         
-        finished = true;
+        settled = true;
+        
         cleanup();
         
-        reject(errorMessage);
+        reject(error);
       };
       
-      this.socket.once('tiktokConnected', onConnected);
-      this.socket.once('tiktokDisconnected', onDisconnected);
-      
-      const timeoutId = setTimeout(() => {
+      const timer = setTimeout(() => {
         
-        if (finished) {
+        if (settled) {
           return;
         }
         
-        finished = true;
+        settled = true;
+        
         cleanup();
         
         reject('Connection Timeout');
         
       }, 15000);
+      
+      this.socket.once(
+        'tiktokConnected',
+        onConnected
+      );
+      
+      this.socket.once(
+        'tiktokDisconnected',
+        onDisconnected
+      );
     });
   }
   
   setUniqueId() {
     
-    if (!this.socket || !this.socket.connected) {
+    if (!this.uniqueId) {
       return;
     }
     
@@ -123,10 +135,10 @@ class TikTokIOConnection {
   }
   
   on(eventName, eventHandler) {
-    this.socket.on(eventName, eventHandler);
-  }
-  
-  off(eventName, eventHandler) {
-    this.socket.off(eventName, eventHandler);
+    
+    this.socket.on(
+      eventName,
+      eventHandler
+    );
   }
 }
