@@ -2,12 +2,13 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     >
 
-    <title>ギフト音声テスト</title>
+    <title>ギフト音声・BGMテスト</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -15,9 +16,11 @@
 <body>
 
     <header class="head">
+
         <div style="padding: 12px; font-size: 18px;">
-            🎁 ギフト音声テスト
+            🎁 ギフト音声・BGMテスト
         </div>
+
     </header>
 
 
@@ -31,7 +34,7 @@
         >
 
             <h2>
-                ギフト音声テスト
+                音声テスト
             </h2>
 
             <p>
@@ -40,48 +43,294 @@
 
             <p>
                 <strong>
-                    「無操作テスト」は押した後ではなく、
-                    ページを開いてから何も触らない状態でも自動テストします。
+                    iPhone / iPad の自動再生制限を確認するため、
+                    「無操作」と「操作あり」を分けてテストします。
                 </strong>
             </p>
 
         </div>
 
 
+        <!-- ============================= -->
+        <!-- ギフト音声 -->
+        <!-- ============================= -->
+
         <div
             style="
-                padding: 10px;
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
+                margin: 10px;
+                padding: 12px;
+                background: #2c2c2e;
+                border-radius: 8px;
             "
         >
 
+            <h3>
+                🎁 ギフト音声
+            </h3>
+
+
+            <div
+                style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    margin-top: 10px;
+                "
+            >
+
+                <button
+                    id="manualTestButton"
+                    type="button"
+                >
+                    🎁 今すぐ音声テスト
+                </button>
+
+
+                <button
+                    id="autoTestButton"
+                    type="button"
+                >
+                    ⏱️ 5秒後に音声テスト
+                </button>
+
+
+                <button
+                    id="repeatTestButton"
+                    type="button"
+                >
+                    🔊 3回連続音声テスト
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ============================= -->
+        <!-- BGM -->
+        <!-- ============================= -->
+
+        <div
+            style="
+                margin: 10px;
+                padding: 12px;
+                background: #2c2c2e;
+                border-radius: 8px;
+            "
+        >
+
+            <h3>
+                🎵 BGM
+            </h3>
+
+
+            <div
+                style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    margin-top: 10px;
+                "
+            >
+
+                <button
+                    id="bgmManualButton"
+                    type="button"
+                >
+                    🎵 BGMを今すぐ再生
+                </button>
+
+
+                <button
+                    id="bgmAutoButton"
+                    type="button"
+                >
+                    ⏱️ 5秒後にBGM再生
+                </button>
+
+
+                <button
+                    id="bgmToggleButton"
+                    type="button"
+                >
+                    🔇 BGM ON / OFF
+                </button>
+
+
+                <button
+                    id="bgmStopButton"
+                    type="button"
+                >
+                    ⏹️ BGM停止
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ============================= -->
+        <!-- 同時再生 -->
+        <!-- ============================= -->
+
+        <div
+            style="
+                margin: 10px;
+                padding: 12px;
+                background: #2c2c2e;
+                border-radius: 8px;
+            "
+        >
+
+            <h3>
+                🎵＋🎁 同時再生
+            </h3>
+
+
+            <div
+                style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    margin-top: 10px;
+                "
+            >
+
+                <button
+                    id="bothManualButton"
+                    type="button"
+                >
+                    🎵＋🎁 今すぐ同時再生
+                </button>
+
+
+                <button
+                    id="bothAutoButton"
+                    type="button"
+                >
+                    ⏱️ 5秒後に同時再生
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ============================= -->
+        <!-- 無操作テスト -->
+        <!-- ============================= -->
+
+        <div
+            style="
+                margin: 10px;
+                padding: 12px;
+                background: #2c2c2e;
+                border-radius: 8px;
+            "
+        >
+
+            <h3>
+                🔒 無操作テスト
+            </h3>
+
+
+            <p>
+                ページを開いてから何も触らずに自動実行します。
+            </p>
+
+
             <button
-                id="manualTestButton"
+                id="noTouchGiftButton"
                 type="button"
             >
-                🎁 今すぐ音声テスト
+                🔒 無操作ギフトテストを開始
             </button>
 
 
             <button
-                id="autoTestButton"
+                id="noTouchBgmButton"
                 type="button"
             >
-                ⏱️ 5秒後に音声テスト
-            </button>
-
-
-            <button
-                id="repeatTestButton"
-                type="button"
-            >
-                🔊 3回連続音声テスト
+                🔒 無操作BGMテストを開始
             </button>
 
         </div>
 
+
+        <!-- ============================= -->
+        <!-- 音声ファイル個別テスト -->
+        <!-- ============================= -->
+
+        <div
+            style="
+                margin: 10px;
+                padding: 12px;
+                background: #2c2c2e;
+                border-radius: 8px;
+            "
+        >
+
+            <h3>
+                🎼 音声ファイル個別テスト
+            </h3>
+
+
+            <div
+                style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    margin-top: 10px;
+                "
+            >
+
+                <button
+                    id="normalButton"
+                    type="button"
+                >
+                    🔊 normal.mp3
+                </button>
+
+
+                <button
+                    id="tegamiButton"
+                    type="button"
+                >
+                    🔊 tegami.mp3
+                </button>
+
+
+                <button
+                    id="durandalButton"
+                    type="button"
+                >
+                    🔊 durandal.mp3
+                </button>
+
+
+                <button
+                    id="dainsleifButton"
+                    type="button"
+                >
+                    🔊 dainsleif.mp3
+                </button>
+
+
+                <button
+                    id="bgmFileButton"
+                    type="button"
+                >
+                    🎵 bgm.mp3
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ============================= -->
+        <!-- 状態 -->
+        <!-- ============================= -->
 
         <div
             style="
@@ -96,6 +345,7 @@
                 状態
             </div>
 
+
             <pre
                 id="testStatus"
                 style="
@@ -108,6 +358,10 @@
         </div>
 
 
+        <!-- ============================= -->
+        <!-- テスト結果 -->
+        <!-- ============================= -->
+
         <div
             style="
                 margin: 10px;
@@ -118,17 +372,52 @@
         >
 
             <div>
-                テストギフト
+                テスト結果
             </div>
+
 
             <div
                 id="giftResult"
                 style="
                     margin-top: 10px;
+                    white-space: pre-wrap;
+                    word-break: break-word;
                 "
             >
                 まだテストしていません
             </div>
+
+        </div>
+
+
+        <!-- ============================= -->
+        <!-- ログ -->
+        <!-- ============================= -->
+
+        <div
+            style="
+                margin: 10px;
+                padding: 12px;
+                background: #2c2c2e;
+                border-radius: 8px;
+            "
+        >
+
+            <div>
+                📋 テストログ
+            </div>
+
+
+            <pre
+                id="testLog"
+                style="
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                    margin-top: 8px;
+                    max-height: 300px;
+                    overflow-y: auto;
+                "
+            ></pre>
 
         </div>
 
