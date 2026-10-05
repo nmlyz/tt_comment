@@ -16,43 +16,105 @@ let likeMessageDisplayed = false;
 
 
 /* =========================================================
-   GIFT AUDIO
+   GIFT AUDIO SETTINGS
+   =========================================================
+   
+   ここを変更するだけで
+   音声ファイルと確率を変更できます。
 ========================================================= */
 
+/*
+ * 通常ギフト音声
+ */
+const NORMAL_GIFT_AUDIO_URL =
+    './tegami.mp3';
+
+
+/*
+ * レアギフト音声
+ *
+ * RARE_GIFT_CHANCE = 2
+ * → 100分の2
+ * → 2%
+ */
+const RARE_GIFT_AUDIO_URL =
+    './sakibare.mp3';
+
+const RARE_GIFT_CHANCE =
+    2;
+
+
+/*
+ * 超レアギフト音声
+ *
+ * SUPER_RARE_GIFT_CHANCE = 1
+ * → 100分の1
+ * → 1%
+ */
+const SUPER_RARE_GIFT_AUDIO_URL =
+    './durandal.mp3';
+
+const SUPER_RARE_GIFT_CHANCE =
+    1;
+
+
+/*
+ * 確率の基準値
+ *
+ * 100なら、
+ *
+ * 1 = 1/100
+ * 2 = 2/100
+ * 10 = 10/100
+ *
+ * という意味。
+ */
+const GIFT_CHANCE_BASE =
+    100;
+
+
+/*
+ * Audio設定
+ */
 let giftAudio = null;
-let giftAudioUnlocked = false;
 
-let giftAudioEnabled = true;
+let giftAudioUnlocked =
+    false;
 
-let giftAudioUrl = './gift.mp3';
 
-let rareGiftAudioUrl = './sakibare.mp3';
+/*
+ * デフォルトは音声ON。
+ *
+ * giftMute=1 の場合だけOFF。
+ */
+let giftAudioEnabled =
+    true;
 
-let superRareGiftAudioUrl = './durandal.mp3';
 
+/*
+ * URLから指定された通常音声。
+ *
+ * giftSound=URL
+ * が指定された場合は
+ * 通常ギフト音声だけこちらに変更。
+ */
+let giftAudioUrl =
+    NORMAL_GIFT_AUDIO_URL;
+
+
+/*
+ * Audio Pool
+ */
 const giftAudioPool = [];
-const GIFT_AUDIO_POOL_SIZE = 8;
+
+const GIFT_AUDIO_POOL_SIZE =
+    8;
 
 
 /* =========================================================
    GIFT DUPLICATE
 ========================================================= */
 
-/*
- * 同じ
- *
- * userId
- * +
- * giftId
- * +
- * createTime
- *
- * のギフトを重複として扱う。
- *
- * 同じギフトイベントがサーバーから
- * 複数回送られてきた場合でも、
- * リストには1件だけ追加する。
- */
 const displayedGiftKeys = new Set();
 
 
@@ -151,6 +213,15 @@ function loadUrlSettings() {
         }
     });
 
+    /*
+     * giftSound
+     *
+     * 通常ギフト音声のみ変更。
+     *
+     * 例:
+     *
+     * ?giftSound=https://example.com/test.mp3
+     */
     if (
         window.settings.giftSound
     ) {
@@ -161,7 +232,9 @@ function loadUrlSettings() {
             ).trim();
 
         if (!giftAudioUrl) {
-            giftAudioUrl = './gift.mp3';
+
+            giftAudioUrl =
+                NORMAL_GIFT_AUDIO_URL;
         }
     }
 
@@ -175,13 +248,15 @@ function loadUrlSettings() {
         window.settings.giftMute === '1'
     ) {
 
-        giftAudioEnabled = false;
+        giftAudioEnabled =
+            false;
 
     } else if (
         window.settings.giftMute === '0'
     ) {
 
-        giftAudioEnabled = true;
+        giftAudioEnabled =
+            true;
     }
 }
 
@@ -209,6 +284,18 @@ function setupGiftAudioButton() {
 
             giftAudioEnabled =
                 !giftAudioEnabled;
+
+            /*
+             * 音声をONにした瞬間も
+             * ユーザー操作なので
+             * Audio unlockを試す。
+             */
+            if (
+                giftAudioEnabled
+            ) {
+
+                unlockGiftAudio();
+            }
 
             updateGiftAudioButton();
         }
@@ -462,9 +549,19 @@ $(document).ready(() => {
 
     setupGiftExpandButton();
 
+    /*
+     * 接続ボタンを押した瞬間は
+     * ユーザー操作なので、
+     * ここでAudio unlockを行う。
+     */
     $('#connectButton').click(function () {
 
-        unlockGiftAudio();
+        if (
+            giftAudioEnabled
+        ) {
+
+            unlockGiftAudio();
+        }
 
         connect();
     });
@@ -474,6 +571,18 @@ $(document).ready(() => {
         function (e) {
 
             if (e.key === 'Enter') {
+
+                /*
+                 * Enterもユーザー操作なので
+                 * Audio unlockを試す。
+                 */
+                if (
+                    giftAudioEnabled
+                ) {
+
+                    unlockGiftAudio();
+                }
+
                 connect();
             }
         }
@@ -1028,15 +1137,6 @@ function isPendingStreak(data) {
    GIFT DUPLICATE KEY
 ========================================================= */
 
-/*
- * 同じ時間の同じギフトを判定する。
- *
- * userId
- * giftId
- * createTime
- *
- * の3つを組み合わせる。
- */
 function getGiftDuplicateKey(data) {
 
     const userId =
@@ -1079,9 +1179,6 @@ function getGiftDuplicateKey(data) {
             );
     }
 
-    /*
-     * createTimeが存在する場合
-     */
     if (createTime) {
 
         return (
@@ -1093,11 +1190,6 @@ function getGiftDuplicateKey(data) {
         );
     }
 
-    /*
-     * createTimeが取得できない場合は
-     * 重複判定を邪魔しないよう、
-     * userId + giftId を使用。
-     */
     return (
         userId +
         '_' +
@@ -1106,17 +1198,10 @@ function getGiftDuplicateKey(data) {
 }
 
 
-/*
- * ギフト音を複数個あらかじめ用意する。
- *
- * これにより、
- *
- * gift 1 → 再生中
- * gift 2 → 別Audioで再生
- * gift 3 → 別Audioで再生
- *
- * のように重ねて再生できる。
- */
+/* =========================================================
+   GIFT AUDIO POOL
+========================================================= */
+
 function prepareGiftAudioPool() {
 
     if (
@@ -1148,9 +1233,6 @@ function prepareGiftAudioPool() {
         );
     }
 
-    /*
-     * 従来の変数も維持
-     */
     if (
         !giftAudio &&
         giftAudioPool.length > 0
@@ -1162,13 +1244,19 @@ function prepareGiftAudioPool() {
 }
 
 
+/* =========================================================
+   AUDIO UNLOCK
+========================================================= */
+
 /*
- * Connectボタンを押したときだけ
- * 無音でAudioを再生して、
- * iPhone等のブラウザ側の
- * Audio再生許可を取得する。
+ * iPhone / Safari等の
+ * 自動再生制限対策。
  *
- * ここでは絶対に音を鳴らさない。
+ * 接続ボタンやEnterなど、
+ * ユーザー操作から呼び出す。
+ *
+ * 音量は0なので、
+ * アンロック時に音は鳴らさない。
  */
 function unlockGiftAudio() {
 
@@ -1189,6 +1277,9 @@ function unlockGiftAudio() {
         audio.muted =
             true;
 
+        audio.volume =
+            0;
+
         audio.currentTime =
             0;
 
@@ -1207,16 +1298,26 @@ function unlockGiftAudio() {
                 audio.muted =
                     false;
 
+                audio.volume =
+                    1.0;
+
                 giftAudioUnlocked =
                     true;
+
+                console.log(
+                    '[DEBUG] Gift audio unlocked'
+                );
 
             }).catch(error => {
 
                 audio.muted =
                     false;
 
+                audio.volume =
+                    1.0;
+
                 console.warn(
-                    'Gift audio unlock failed:',
+                    '[DEBUG] Gift audio unlock failed:',
                     error
                 );
             });
@@ -1225,23 +1326,43 @@ function unlockGiftAudio() {
     } catch (e) {
 
         console.warn(
-            'Gift audio unlock failed:',
+            '[DEBUG] Gift audio unlock failed:',
             e
         );
     }
 }
 
 
+/* =========================================================
+   GIFT AUDIO PLAY
+========================================================= */
+
 /*
- * ギフト音の抽選
+ * 確率は上部の
  *
- * 1       → durandal.mp3  1/100
- * 2～3    → sakibare.mp3  2/100 = 1/50
- * 4～100  → gift.mp3      97/100
+ * RARE_GIFT_CHANCE
+ * SUPER_RARE_GIFT_CHANCE
+ *
+ * だけ変更すればOK。
+ *
+ * 例:
+ *
+ * RARE_GIFT_CHANCE = 5
+ * → 5 / 100
+ * → 5%
+ *
+ * SUPER_RARE_GIFT_CHANCE = 1
+ * → 1 / 100
+ * → 1%
+ *
+ * 超レアを先に判定する。
  */
 function playGiftSound() {
 
-    if (!giftAudioEnabled) {
+    if (
+        !giftAudioEnabled
+    ) {
+
         return;
     }
 
@@ -1249,45 +1370,53 @@ function playGiftSound() {
 
         const random =
             Math.floor(
-                Math.random() * 100
+                Math.random() *
+                GIFT_CHANCE_BASE
             ) + 1;
 
         let soundUrl =
             giftAudioUrl;
 
+
         /*
-         * 1 / 100
+         * 超レア
          *
-         * durandal.mp3
+         * 1 / 100
          */
         if (
-            random === 1
+            random <=
+            SUPER_RARE_GIFT_CHANCE
         ) {
 
             soundUrl =
-                superRareGiftAudioUrl;
+                SUPER_RARE_GIFT_AUDIO_URL;
 
         /*
+         * レア
+         *
          * 2 / 100
          *
-         * = 1 / 50
-         *
-         * sakibare.mp3
+         * 現在は
+         * 2～3
          */
         } else if (
-            random === 2 ||
-            random === 3
+            random <=
+            (
+                SUPER_RARE_GIFT_CHANCE +
+                RARE_GIFT_CHANCE
+            )
         ) {
 
             soundUrl =
-                rareGiftAudioUrl;
+                RARE_GIFT_AUDIO_URL;
         }
 
+
         /*
-         * 選ばれた音声を
-         * 毎回新しいAudioで再生。
+         * 毎回新しいAudioを作る。
          *
-         * 再生中でも重ねて再生可能。
+         * 前の音声が再生中でも
+         * 別のAudioとして再生できる。
          */
         const audio =
             new Audio(
@@ -1309,7 +1438,7 @@ function playGiftSound() {
                 function (error) {
 
                     console.warn(
-                        'Gift audio playback blocked:',
+                        '[DEBUG] Gift audio playback blocked:',
                         error
                     );
                 }
@@ -1319,7 +1448,7 @@ function playGiftSound() {
     } catch (e) {
 
         console.warn(
-            'Gift audio error:',
+            '[DEBUG] Gift audio error:',
             e
         );
     }
@@ -1362,19 +1491,6 @@ function addGiftItem(data) {
             .remove();
     }
 
-    /*
-     * ============================================
-     * ギフト重複防止
-     * ============================================
-     *
-     * 同じ userId
-     * +
-     * 同じ giftId
-     * +
-     * 同じ createTime
-     *
-     * のイベントは1回だけ表示する。
-     */
     const giftDuplicateKey =
         getGiftDuplicateKey(data);
 
@@ -1391,10 +1507,6 @@ function addGiftItem(data) {
         giftDuplicateKey
     );
 
-    /*
-     * Setが無限に大きくならないように
-     * 古いキーを整理する。
-     */
     if (
         displayedGiftKeys.size >
         5000
@@ -1758,12 +1870,6 @@ function addChatItem(
         '</div>'
     );
 
-    /*
-     * 通常のチャットだけ
-     * 自動スクロール設定に従う。
-     *
-     * OBSのeventcontainerは従来通り。
-     */
     if (
         container.hasClass(
             'chatcontainer'
@@ -2099,11 +2205,6 @@ connection.on(
             return;
         }
 
-        /*
-         * いいね抑制は
-         * 実際の通常コメントが来た
-         * ときだけ解除する。
-         */
         likeMessageDisplayed =
             false;
 
@@ -2162,13 +2263,6 @@ connection.on(
             data
         );
 
-        /*
-         * ギフト受信時に音を再生。
-         *
-         * 100分の1 → durandal
-         * 50分の1 → sakibare
-         * それ以外 → gift
-         */
         playGiftSound();
     }
 );
@@ -2264,14 +2358,6 @@ connection.on(
 
         updateRoomStats();
 
-        /*
-         * 最初のいいねを表示。
-         *
-         * member / social / 参加しました
-         * では解除しない。
-         *
-         * 通常のchatが来たら解除される。
-         */
         if (
             likeMessageDisplayed
         ) {

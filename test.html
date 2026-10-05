@@ -2,232 +2,132 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     >
 
-    <title>TikTok LIVE ギフトテスト</title>
+    <title>ギフト音声テスト</title>
 
-    <link rel="icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css">
-
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
-        crossorigin="anonymous"
-        referrerpolicy="no-referrer"
-    ></script>
-
-    <script
-        src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"
-        crossorigin="anonymous"
-        referrerpolicy="no-referrer"
-    ></script>
-
-    <script src="connection.js"></script>
-    <script src="app.js"></script>
 </head>
 
 <body>
 
     <header class="head">
-
-        <button
-            id="viewerMenuButton"
-            class="viewerMenuButton"
-            type="button"
-        >
-            ☰
-        </button>
-
+        <div style="padding: 12px; font-size: 18px;">
+            🎁 ギフト音声テスト
+        </div>
     </header>
-
-
-    <div
-        id="viewerSideMenu"
-        class="viewerSideMenu"
-    >
-
-        <div class="viewerMenuHeader">
-
-            <span>視聴者</span>
-
-            <button
-                id="viewerMenuClose"
-                type="button"
-            >
-                ×
-            </button>
-
-        </div>
-
-        <div
-            id="viewerCountText"
-            class="viewerCountText"
-        >
-            視聴者数: 0
-        </div>
-
-        <div
-            id="viewerList"
-            class="viewerList"
-        ></div>
-
-    </div>
-
-
-    <div
-        id="viewerMenuOverlay"
-        class="viewerMenuOverlay"
-    ></div>
 
 
     <main>
 
-        <div class="inputFields">
+        <div
+            style="
+                padding: 10px;
+                text-align: center;
+            "
+        >
 
-            <div class="inputRow">
+            <h2>
+                ギフト音声テスト
+            </h2>
 
-                <input
-                    type="text"
-                    id="uniqueIdInput"
-                    placeholder="テストモード"
-                    autocomplete="off"
-                    value="test_user"
-                >
+            <p>
+                このページは app.js / connection.js を使用しません。
+            </p>
 
-                <button
-                    id="copyUrlButton"
-                    type="button"
-                >
-                    URLコピー
-                </button>
-
-            </div>
-
-            <button
-                id="connectButton"
-                type="button"
-            >
-                接続
-            </button>
+            <p>
+                <strong>
+                    「無操作テスト」は押した後ではなく、
+                    ページを開いてから何も触らない状態でも自動テストします。
+                </strong>
+            </p>
 
         </div>
 
-
-        <div class="statusBar">
-
-            <pre id="stateText">ギフトテストモード</pre>
-
-            <div id="roomStats">
-                視聴者数: 0　いいね: 0　ダイヤ: 0
-            </div>
-
-        </div>
-
-
-        <!-- =========================================
-             テスト操作
-        ========================================== -->
 
         <div
             style="
-                padding: 6px;
+                padding: 10px;
                 display: flex;
-                flex-wrap: wrap;
-                gap: 6px;
+                flex-direction: column;
+                gap: 8px;
             "
         >
 
             <button
-                id="testGiftButton"
+                id="manualTestButton"
                 type="button"
             >
-                🎁 テストギフト
+                🎁 今すぐ音声テスト
             </button>
 
-            <button
-                id="testGift10Button"
-                type="button"
-            >
-                🎁×10
-            </button>
 
             <button
-                id="testDuplicateGiftButton"
+                id="autoTestButton"
                 type="button"
             >
-                🔁 重複テスト
+                ⏱️ 5秒後に音声テスト
             </button>
 
+
             <button
-                id="testSoundButton"
+                id="repeatTestButton"
                 type="button"
             >
-                🔊 音声テスト
+                🔊 3回連続音声テスト
             </button>
 
         </div>
 
 
-        <div class="mainContent">
+        <div
+            style="
+                margin: 10px;
+                padding: 12px;
+                background: #2c2c2e;
+                border-radius: 8px;
+            "
+        >
 
-            <div class="chatcontainer">
-
-                <h3 class="containerheader">
-
-                    <span>
-                        チャット
-                    </span>
-
-                    <button
-                        id="chatAutoScrollButton"
-                        class="containerActionButton"
-                        type="button"
-                        title="チャット自動スクロール"
-                    >
-                        ↓
-                    </button>
-
-                </h3>
-
+            <div>
+                状態
             </div>
 
+            <pre
+                id="testStatus"
+                style="
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                    margin-top: 8px;
+                "
+            >ページ読み込み完了</pre>
 
-            <div class="giftcontainer">
+        </div>
 
-                <h3 class="containerheader">
 
-                    <span>
-                        ギフト
-                    </span>
+        <div
+            style="
+                margin: 10px;
+                padding: 12px;
+                background: #2c2c2e;
+                border-radius: 8px;
+            "
+        >
 
-                    <span class="giftHeaderButtons">
+            <div>
+                テストギフト
+            </div>
 
-                        <button
-                            id="giftAudioButton"
-                            class="containerActionButton"
-                            type="button"
-                            title="ギフト音をオン"
-                        >
-                            🔇
-                        </button>
-
-                        <button
-                            id="giftExpandButton"
-                            class="containerActionButton"
-                            type="button"
-                            title="ギフトを拡大"
-                        >
-                            ⛶
-                        </button>
-
-                    </span>
-
-                </h3>
-
+            <div
+                id="giftResult"
+                style="
+                    margin-top: 10px;
+                "
+            >
+                まだテストしていません
             </div>
 
         </div>
@@ -235,243 +135,7 @@
     </main>
 
 
-    <script>
-
-        /*
-         * ============================================
-         * テストギフト
-         * ============================================
-         */
-
-        function createTestGift(
-            giftId,
-            createTime
-        ) {
-
-            return {
-
-                userId: '123456789',
-
-                uniqueId: 'test_user',
-
-                giftId: giftId,
-
-                giftName: 'テストギフト',
-
-                giftType: 0,
-
-                repeatCount: 1,
-
-                repeatEnd: true,
-
-                diamondCount: 10,
-
-                giftPictureUrl: '',
-
-                profilePictureUrl: '',
-
-                describe: 'テストギフトを送信',
-
-                common: {
-
-                    createTime:
-                        createTime
-
-                }
-
-            };
-        }
-
-
-        /*
-         * 実際のgiftイベントと
-         * 同じ処理を呼び出す。
-         */
-        function sendTestGift() {
-
-            const data =
-                createTestGift(
-                    'TEST001',
-                    Date.now()
-                );
-
-            /*
-             * app.jsの
-             * addGiftItem()
-             * を直接呼び出す。
-             */
-            addGiftItem(
-                data
-            );
-
-            /*
-             * 音声も実際のgiftと
-             * 同じ処理。
-             */
-            playGiftSound();
-        }
-
-
-        /*
-         * 10個連続テスト
-         */
-        function sendTestGift10() {
-
-            for (
-                let i = 0;
-                i < 10;
-                i++
-            ) {
-
-                setTimeout(
-                    function () {
-
-                        const data =
-                            createTestGift(
-                                'TEST_' +
-                                Date.now() +
-                                '_' +
-                                i,
-                                Date.now() +
-                                i
-                            );
-
-                        addGiftItem(
-                            data
-                        );
-
-                        playGiftSound();
-
-                    },
-                    i * 150
-                );
-            }
-        }
-
-
-        /*
-         * 同じgiftを
-         * 同じcreateTimeで2回送る。
-         *
-         * 重複防止が正常なら
-         * 表示は1件だけ。
-         */
-        function sendDuplicateGiftTest() {
-
-            const createTime =
-                Date.now();
-
-            const data1 =
-                createTestGift(
-                    'DUPLICATE001',
-                    createTime
-                );
-
-            const data2 =
-                createTestGift(
-                    'DUPLICATE001',
-                    createTime
-                );
-
-            addGiftItem(
-                data1
-            );
-
-            addGiftItem(
-                data2
-            );
-
-            /*
-             * 重複なので音も1回だけにする。
-             */
-            playGiftSound();
-        }
-
-
-        /*
-         * 音声だけテスト
-         */
-        function sendTestSound() {
-
-            /*
-             * ミュート中なら
-             * ボタンと同じように解除する。
-             */
-            if (
-                !giftAudioEnabled
-            ) {
-
-                giftAudioEnabled =
-                    true;
-
-                unlockGiftAudio();
-
-                updateGiftAudioButton();
-            }
-
-            setTimeout(
-                function () {
-
-                    playGiftSound();
-
-                },
-                100
-            );
-        }
-
-
-        /*
-         * テストギフト
-         */
-        $('#testGiftButton').on(
-            'click',
-            function () {
-
-                sendTestGift();
-
-            }
-        );
-
-
-        /*
-         * 10連続
-         */
-        $('#testGift10Button').on(
-            'click',
-            function () {
-
-                sendTestGift10();
-
-            }
-        );
-
-
-        /*
-         * 重複テスト
-         */
-        $('#testDuplicateGiftButton').on(
-            'click',
-            function () {
-
-                sendDuplicateGiftTest();
-
-            }
-        );
-
-
-        /*
-         * 音声テスト
-         */
-        $('#testSoundButton').on(
-            'click',
-            function () {
-
-                sendTestSound();
-
-            }
-        );
-
-    </script>
+    <script src="test.js"></script>
 
 </body>
 </html>
