@@ -288,6 +288,7 @@ a:hover {
 
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
+
     body {
         padding: 12px;
     }
