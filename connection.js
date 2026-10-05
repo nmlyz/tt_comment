@@ -2,18 +2,14 @@ class TikTokIOConnection {
   
   constructor(backendUrl) {
     
-    this.backendUrl =
-      backendUrl ||
-      "https://sacrifice-nico.com";
+    this.backendUrl = backendUrl || "https://sacrifice-nico.com";
     
     this.socket = io(this.backendUrl, {
       transports: ["polling", "websocket"],
-      upgrade: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000
+      reconnectionDelayMax: 5000
     });
     
     this.uniqueId = null;
@@ -26,7 +22,6 @@ class TikTokIOConnection {
       if (this.uniqueId) {
         this.setUniqueId();
       }
-      
     });
     
     this.socket.on('disconnect', () => {
@@ -38,7 +33,6 @@ class TikTokIOConnection {
       console.warn("LIVE has ended!");
       
       this.uniqueId = null;
-      
     });
     
     this.socket.on('tiktokDisconnected', (errMsg) => {
@@ -51,7 +45,6 @@ class TikTokIOConnection {
       ) {
         this.uniqueId = null;
       }
-      
     });
   }
   
@@ -68,83 +61,72 @@ class TikTokIOConnection {
       
       const cleanup = () => {
         
-        this.socket.off(
-          'tiktokConnected',
-          handleConnected
-        );
+        this.socket.off('tiktokConnected', onConnected);
+        this.socket.off('tiktokDisconnected', onDisconnected);
         
-        this.socket.off(
-          'tiktokDisconnected',
-          handleDisconnected
-        );
-        
-        clearTimeout(timer);
+        clearTimeout(timeoutId);
       };
       
-      const handleConnected = (state) => {
+      const onConnected = (state) => {
         
-        if (finished) return;
+        if (finished) {
+          return;
+        }
         
         finished = true;
-        
         cleanup();
         
         resolve(state);
       };
       
-      const handleDisconnected = (error) => {
+      const onDisconnected = (errorMessage) => {
         
-        if (finished) return;
+        if (finished) {
+          return;
+        }
         
         finished = true;
-        
         cleanup();
         
-        reject(error);
+        reject(errorMessage);
       };
       
-      const timer = setTimeout(() => {
+      this.socket.once('tiktokConnected', onConnected);
+      this.socket.once('tiktokDisconnected', onDisconnected);
+      
+      const timeoutId = setTimeout(() => {
         
-        if (finished) return;
+        if (finished) {
+          return;
+        }
         
         finished = true;
-        
         cleanup();
         
         reject('Connection Timeout');
         
       }, 15000);
-      
-      this.socket.once(
-        'tiktokConnected',
-        handleConnected
-      );
-      
-      this.socket.once(
-        'tiktokDisconnected',
-        handleDisconnected
-      );
-      
     });
   }
   
   setUniqueId() {
+    
+    if (!this.socket || !this.socket.connected) {
+      return;
+    }
     
     this.socket.emit(
       'setUniqueId',
       this.uniqueId,
       this.options || {}
     );
-    
   }
   
   on(eventName, eventHandler) {
-    
-    this.socket.on(
-      eventName,
-      eventHandler
-    );
-    
+    this.socket.on(eventName, eventHandler);
   }
   
+  off(eventName, eventHandler) {
+    this.socket.off(eventName, eventHandler);
+  }
 }

@@ -2,14 +2,24 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>TikTok LIVE コメントビューアー</title>
 
+    <meta name="description" content="TikTok LIVEのコメントビューアー">
+    <meta name="keywords" content="TikTok,Live,ライブ,コメント,コメビュ,コメントビューアー,コメントビューワー">
+
+    <link rel="icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"></script>
 
     <script src="connection.js"></script>
     <script src="app.js"></script>
@@ -17,14 +27,16 @@
 
 <body>
 
-    <button id="menuButton" class="menuButton">☰</button>
+    <header class="head">
+        <button id="viewerMenuButton" class="viewerMenuButton" type="button">
+            ☰
+        </button>
+    </header>
 
-    <div id="viewerOverlay" class="viewerOverlay"></div>
-
-    <aside id="viewerMenu" class="viewerMenu">
+    <div id="viewerSideMenu" class="viewerSideMenu">
         <div class="viewerMenuHeader">
             <span>視聴者</span>
-            <button id="closeViewerMenu">×</button>
+            <button id="viewerMenuClose" type="button">×</button>
         </div>
 
         <div id="viewerCountText" class="viewerCountText">
@@ -32,45 +44,51 @@
         </div>
 
         <div id="viewerList" class="viewerList"></div>
-    </aside>
+    </div>
 
-    <div class="inputArea">
+    <div id="viewerMenuOverlay" class="viewerMenuOverlay"></div>
 
-        <div class="inputRow">
-            <input
-                type="text"
-                id="uniqueIdInput"
-                placeholder="ユーザーID または URL"
-                autocomplete="off"
-            >
+    <main>
 
-            <button id="copyUrlButton">
-                URLコピー
+        <div class="inputFields">
+
+            <div class="inputRow">
+                <input
+                    type="text"
+                    id="uniqueIdInput"
+                    placeholder="ユーザーIDかURL を入力..."
+                    autocomplete="off"
+                >
+
+                <button id="copyUrlButton" type="button">
+                    URLコピー
+                </button>
+            </div>
+
+            <button id="connectButton" type="button">
+                接続
             </button>
+
         </div>
 
-        <button id="connectButton">
-            接続
-        </button>
-
-    </div>
-
-    <div class="statusBar">
-        <pre id="stateText"></pre>
-        <div id="roomStats"></div>
-    </div>
-
-    <div class="mainContent">
-
-        <div class="chatcontainer">
-            <h3 class="containerheader">チャット</h3>
+        <div class="statusBar">
+            <pre id="stateText"></pre>
+            <div id="roomStats"></div>
         </div>
 
-        <div class="giftcontainer">
-            <h3 class="containerheader">ギフト</h3>
+        <div class="mainContent">
+
+            <div class="chatcontainer">
+                <h3 class="containerheader">チャット</h3>
+            </div>
+
+            <div class="giftcontainer">
+                <h3 class="containerheader">ギフト</h3>
+            </div>
+
         </div>
 
-    </div>
+    </main>
 
 </body>
 </html>
