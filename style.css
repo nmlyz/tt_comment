@@ -2,33 +2,24 @@
     box-sizing: border-box;
 }
 
-html {
+html,
+body {
     width: 100%;
     height: 100%;
-    min-height: 0;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-    margin: 0;
-    padding: 0;
-
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-
     background: #18171c;
     color: #e3e5eb;
-
     font-family:
         -apple-system,
         BlinkMacSystemFont,
         "Helvetica Neue",
         Arial,
         sans-serif;
-
     overflow: hidden;
-
-    -webkit-text-size-adjust: 100%;
 }
 
 button,
@@ -36,79 +27,205 @@ input {
     font-family: inherit;
 }
 
-.head {
-    position: relative;
-
-    width: 100%;
-    height: 48px;
-
-    flex-shrink: 0;
-
-    display: flex;
-    align-items: center;
-
-    padding: 0 12px;
-
-    background: #202025;
-    border-bottom: 1px solid #36353b;
+button {
+    -webkit-tap-highlight-color: transparent;
 }
 
-.viewerMenuButton {
-    width: 38px;
-    height: 36px;
+/* =========================
+   ハンバーガーボタン
+   ========================= */
 
-    padding: 0;
+.menuButton {
+    position: fixed;
+    top: 12px;
+    left: 12px;
 
-    border: 0;
+    width: 42px;
+    height: 42px;
+
+    border: 1px solid #45444b;
     border-radius: 8px;
 
     background: #2c2c32;
     color: #e3e5eb;
 
     font-size: 22px;
-    line-height: 36px;
+    line-height: 42px;
 
-    cursor: pointer;
+    padding: 0;
+    z-index: 1001;
 }
 
-.viewerMenuButton:active {
-    background: #3a3a40;
+.menuButton:active {
+    background: #3a3a42;
 }
 
-.page {
-    width: 100%;
-    height: calc(100% - 48px);
+/* =========================
+   視聴者メニュー
+   ========================= */
 
-    min-height: 0;
+.viewerOverlay {
+    position: fixed;
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.45);
+
+    display: none;
+    z-index: 1000;
+}
+
+.viewerOverlay.show {
+    display: block;
+}
+
+.viewerMenu {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: min(360px, 82vw);
+    height: 100%;
+
+    background: #202025;
+
+    border-right: 1px solid #3b3a40;
+
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+
+    z-index: 1002;
 
     display: flex;
     flex-direction: column;
 
-    padding: 10px;
+    min-height: 0;
+}
+
+.viewerMenu.open {
+    transform: translateX(0);
+}
+
+.viewerMenuHeader {
+    height: 56px;
+    min-height: 56px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 14px;
+
+    border-bottom: 1px solid #38373d;
+
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.viewerMenuHeader button {
+    width: 36px;
+    height: 36px;
+
+    border: 0;
+    border-radius: 8px;
+
+    background: #333238;
+    color: #e3e5eb;
+
+    font-size: 24px;
+}
+
+.viewerCountText {
+    padding: 10px 14px;
+
+    color: #aeb0b8;
+
+    font-size: 13px;
+
+    border-bottom: 1px solid #323137;
+}
+
+.viewerList {
+    flex: 1;
+
+    min-height: 0;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    -webkit-overflow-scrolling: touch;
+}
+
+.viewerItem {
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+
+    padding: 8px 12px;
+
+    border-bottom: 1px solid #2d2c31;
+}
+
+.viewerItem img {
+    width: 34px;
+    height: 34px;
+
+    flex: 0 0 34px;
+
+    border-radius: 50%;
+
+    object-fit: cover;
+
+    background: #303036;
+}
+
+.viewerInfo {
+    min-width: 0;
 
     overflow: hidden;
 }
 
-.topArea {
-    width: 100%;
+.viewerNickname {
+    font-size: 13px;
+    font-weight: bold;
 
-    flex-shrink: 0;
-
-    display: flex;
-    flex-direction: column;
-
-    gap: 7px;
-
-    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.inputFields {
+.viewerId {
+    margin-top: 2px;
+
+    color: #94969f;
+
+    font-size: 11px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* =========================
+   入力部分
+   ========================= */
+
+.inputArea {
     width: 100%;
 
-    display: flex;
-    align-items: stretch;
+    padding: 12px;
 
-    gap: 6px;
+    background: #18171c;
+
+    position: relative;
+    z-index: 5;
+}
+
+.inputRow {
+    display: flex;
+    width: 100%;
+    gap: 8px;
 }
 
 #uniqueIdInput {
@@ -119,7 +236,7 @@ input {
 
     padding: 0 12px;
 
-    border: 1px solid #44434a;
+    border: 1px solid #45444b;
     border-radius: 8px;
 
     outline: none;
@@ -127,124 +244,112 @@ input {
     background: #2c2c32;
     color: #e3e5eb;
 
-    font-size: 15px;
+    font-size: 14px;
 }
 
 #uniqueIdInput::placeholder {
-    color: #9b9ba3;
+    color: #85868e;
 }
 
 #uniqueIdInput:focus {
-    border-color: #66656e;
+    border-color: #64656d;
 }
 
-#copyUrlButton {
-    flex-shrink: 0;
-
-    height: 42px;
-
-    padding: 0 12px;
-
+#copyUrlButton,
+#connectButton {
     border: 1px solid #45444b;
     border-radius: 8px;
 
-    background: #35343b;
+    background: #2c2c32;
     color: #e3e5eb;
 
-    font-size: 13px;
-
-    cursor: pointer;
+    font-size: 14px;
 }
 
-#copyUrlButton:active {
-    background: #44434b;
+#copyUrlButton {
+    width: 92px;
+    min-width: 92px;
+    height: 42px;
 }
 
 #connectButton {
     width: 100%;
-    height: 40px;
+    height: 42px;
 
-    flex-shrink: 0;
-
-    border: 0;
-    border-radius: 8px;
-
-    background: #4a4a52;
-    color: #ffffff;
-
-    font-size: 15px;
-    font-weight: 600;
-
-    cursor: pointer;
+    margin-top: 8px;
 }
 
+#copyUrlButton:active,
 #connectButton:active {
-    background: #5a5a63;
+    background: #3a3a42;
 }
+
+/* =========================
+   ステータス
+   ========================= */
 
 .statusBar {
     width: 100%;
 
-    flex-shrink: 0;
+    padding: 8px 12px;
 
-    min-height: 35px;
+    background: #1c1b20;
 
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    border-top: 1px solid #2d2c32;
+    border-bottom: 1px solid #2d2c32;
 
-    gap: 8px;
-
-    margin-bottom: 8px;
-    padding: 6px 9px;
-
-    background: #202025;
-    border: 1px solid #36353b;
-    border-radius: 8px;
-
-    overflow: hidden;
+    min-height: 45px;
 }
 
 #stateText {
-    flex: 1;
-
-    min-width: 0;
-
     margin: 0;
 
-    color: #bfc1c8;
+    font-family: inherit;
 
     font-size: 12px;
 
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: #bfc1c9;
+
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 #roomStats {
-    flex-shrink: 0;
+    margin-top: 3px;
 
-    color: #aeb0b8;
+    font-size: 12px;
 
-    font-size: 11px;
-
-    white-space: nowrap;
+    color: #9fa1aa;
 }
 
+/* =========================
+   メイン
+   ========================= */
+
 .mainContent {
-    width: 100%;
-
-    flex: 1 1 auto;
-
-    min-height: 0;
-
     display: grid;
 
-    grid-template-columns: minmax(0, 1fr) minmax(180px, 32%);
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(230px, 34%);
 
     gap: 8px;
 
-    overflow: hidden;
+    width: 100%;
+
+    height: calc(
+        100vh -
+        12px -
+        42px -
+        8px -
+        42px -
+        8px -
+        45px
+    );
+
+    min-height: 0;
+
+    padding: 0 8px 8px;
 }
 
 .chatcontainer,
@@ -252,21 +357,15 @@ input {
     min-width: 0;
     min-height: 0;
 
-    height: 100%;
-
     background: #202025;
 
     border: 1px solid #36353b;
     border-radius: 8px;
 
-    overflow-x: hidden;
     overflow-y: auto;
+    overflow-x: hidden;
 
     -webkit-overflow-scrolling: touch;
-
-    overscroll-behavior: contain;
-
-    scrollbar-width: thin;
 }
 
 .chatcontainer {
@@ -278,15 +377,13 @@ input {
     display: flex;
     flex-direction: column;
 
-    overflow-x: hidden;
-    overflow-y: auto;
-
     min-height: 0;
-    height: 100%;
+    max-height: 100%;
+
+    overflow-y: auto;
+    overflow-x: hidden;
 
     -webkit-overflow-scrolling: touch;
-
-    overscroll-behavior: contain;
 }
 
 .containerheader {
@@ -295,73 +392,58 @@ input {
 
     z-index: 2;
 
-    flex-shrink: 0;
-
     margin: 0;
-
-    padding: 7px 9px;
+    padding: 9px 11px;
 
     background: #29282e;
-    color: #d9dbe1;
 
     border-bottom: 1px solid #3a393f;
 
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 13px;
+    color: #d5d7de;
 }
 
-.chatcontainer > div,
-.giftcontainer > div {
-    flex-shrink: 0;
-}
+/* =========================
+   チャット
+   ========================= */
 
-.chatcontainer > div {
+.chatcontainer > div:not(.containerheader),
+.eventcontainer > div {
     display: flex;
+
     align-items: flex-start;
 
     gap: 7px;
 
     padding: 6px 8px;
 
-    border-bottom: 1px solid rgba(255, 255, 255, 0.035);
+    border-bottom: 1px solid #2c2b30;
 
     font-size: 13px;
 
-    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
-.giftcontainer > div {
-    padding: 5px 7px;
-    margin-bottom: 3px;
-
-    border-bottom: 1px solid rgba(255, 255, 255, 0.035);
-
-    font-size: 11px;
-
-    line-height: 1.25;
+.chatcontainer > div > span,
+.eventcontainer > div > span {
+    min-width: 0;
 }
 
 .miniprofilepicture {
     width: 30px;
     height: 30px;
 
-    flex-shrink: 0;
+    min-width: 30px;
 
     border-radius: 50%;
 
     object-fit: cover;
 
-    background: #333238;
-}
-
-.giftcontainer .miniprofilepicture {
-    width: 27px;
-    height: 27px;
+    background: #303036;
 }
 
 .usernamelink {
-    color: #8faee8;
-
+    color: #9cb7ee !important;
     text-decoration: none;
 }
 
@@ -369,29 +451,82 @@ input {
     text-decoration: underline;
 }
 
+/* =========================
+   ギフト
+   ========================= */
+
+.giftcontainer > div {
+    padding: 5px 7px;
+
+    margin-bottom: 2px;
+
+    border-bottom: 1px solid #2c2b30;
+
+    font-size: 11px;
+
+    overflow-wrap: anywhere;
+}
+
+.giftcontainer > div > span {
+    min-width: 0;
+}
+
+.giftcontainer .miniprofilepicture {
+    width: 27px;
+    height: 27px;
+
+    min-width: 27px;
+}
+
+.giftcontainer table {
+    border-collapse: collapse;
+    margin-top: 3px;
+}
+
+.giftcontainer td {
+    padding: 0;
+    vertical-align: middle;
+}
+
 .gifticon {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
 
     object-fit: contain;
 
-    display: block;
+    margin-right: 5px;
 }
 
 .giftTitle {
-    font-size: 10px;
-    line-height: 1.2;
+    font-size: 9px;
 }
 
 .giftDetail {
-    font-size: 9px;
-    line-height: 1.2;
+    font-size: 8px;
 }
 
 .giftTime {
-    color: #85858e;
+    color: #858791;
     font-size: 9px;
-    white-space: nowrap;
+    margin-left: 4px;
+}
+
+.giftcontainer b {
+    font-size: 10px;
+}
+
+/* =========================
+   OBS
+   ========================= */
+
+.eventcontainer {
+    width: 100%;
+
+    min-height: 0;
+
+    overflow: hidden;
+
+    padding: 4px;
 }
 
 .splitstatetable {
@@ -400,268 +535,77 @@ input {
 }
 
 .splitstatetable td {
-    padding: 3px 5px;
+    padding: 3px 6px;
 }
 
-.eventcontainer {
-    width: 100%;
-    height: calc(100vh - 10px);
+/* =========================
+   スクロールバー
+   ========================= */
 
-    overflow-y: auto;
-    overflow-x: hidden;
-
-    min-height: 0;
-
-    -webkit-overflow-scrolling: touch;
+.chatcontainer::-webkit-scrollbar,
+.giftcontainer::-webkit-scrollbar,
+.viewerList::-webkit-scrollbar {
+    width: 6px;
 }
 
-.eventcontainer > div {
-    margin-top: 5px;
+.chatcontainer::-webkit-scrollbar-track,
+.giftcontainer::-webkit-scrollbar-track,
+.viewerList::-webkit-scrollbar-track {
+    background: #1b1a1f;
 }
 
-.viewerOverlay {
-    position: fixed;
-
-    inset: 0;
-
-    z-index: 90;
-
-    background: rgba(0, 0, 0, 0.45);
-
-    display: none;
+.chatcontainer::-webkit-scrollbar-thumb,
+.giftcontainer::-webkit-scrollbar-thumb,
+.viewerList::-webkit-scrollbar-thumb {
+    background: #45444b;
+    border-radius: 6px;
 }
 
-.viewerOverlay.open {
-    display: block;
-}
-
-.viewerMenu {
-    position: fixed;
-
-    top: 0;
-    left: 0;
-
-    width: min(320px, 85vw);
-    height: 100%;
-
-    z-index: 100;
-
-    display: flex;
-    flex-direction: column;
-
-    background: #202025;
-
-    border-right: 1px solid #3b3a40;
-
-    transform: translateX(-100%);
-
-    transition: transform 0.2s ease;
-
-    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
-
-    min-height: 0;
-}
-
-.viewerMenu.open {
-    transform: translateX(0);
-}
-
-.viewerMenuHeader {
-    height: 48px;
-
-    flex-shrink: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    padding: 0 12px;
-
-    border-bottom: 1px solid #3a393f;
-
-    font-size: 15px;
-    font-weight: 600;
-}
-
-.viewerMenuHeader button {
-    width: 34px;
-    height: 34px;
-
-    padding: 0;
-
-    border: 0;
-    border-radius: 7px;
-
-    background: #303037;
-    color: #e3e5eb;
-
-    font-size: 23px;
-    line-height: 34px;
-}
-
-.viewerCountText {
-    flex-shrink: 0;
-
-    padding: 9px 12px;
-
-    color: #aeb0b8;
-
-    font-size: 12px;
-
-    border-bottom: 1px solid #343339;
-}
-
-.viewerList {
-    flex: 1 1 auto;
-
-    min-height: 0;
-
-    overflow-x: hidden;
-    overflow-y: auto;
-
-    -webkit-overflow-scrolling: touch;
-
-    padding: 5px 0;
-}
-
-.viewerItem {
-    display: flex;
-    align-items: center;
-
-    gap: 9px;
-
-    min-height: 48px;
-
-    padding: 6px 11px;
-}
-
-.viewerItem:hover {
-    background: #2a292f;
-}
-
-.viewerItemPicture {
-    width: 34px;
-    height: 34px;
-
-    flex-shrink: 0;
-
-    border-radius: 50%;
-
-    object-fit: cover;
-
-    background: #333238;
-}
-
-.viewerItemText {
-    min-width: 0;
-
-    display: flex;
-    flex-direction: column;
-
-    gap: 1px;
-}
-
-.viewerItemName {
-    overflow: hidden;
-
-    white-space: nowrap;
-    text-overflow: ellipsis;
-
-    color: #e4e5ea;
-
-    font-size: 13px;
-}
-
-.viewerItemId {
-    overflow: hidden;
-
-    white-space: nowrap;
-    text-overflow: ellipsis;
-
-    color: #85858e;
-
-    font-size: 10px;
-}
+/* =========================
+   スマホ
+   ========================= */
 
 @media (max-width: 700px) {
 
-    .page {
-        padding: 8px;
-    }
-
     .mainContent {
-        grid-template-columns: minmax(0, 1fr) minmax(125px, 34%);
-        gap: 6px;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(130px, 34%);
+
+        height: calc(100vh - 205px);
     }
 
-    .chatcontainer > div {
-        font-size: 12px;
-    }
+    .giftcontainer {
+        min-height: 130px;
+        max-height: 100%;
 
-    .giftcontainer > div {
-        padding: 4px 5px;
-        margin-bottom: 3px;
-
-        font-size: 10px;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .gifticon {
-        width: 30px;
-        height: 30px;
-    }
-
-    .giftcontainer .miniprofilepicture {
         width: 25px;
         height: 25px;
     }
 
-    .giftTitle {
+    .giftcontainer > div {
+        font-size: 10px;
+    }
+
+    .giftcontainer b {
         font-size: 9px;
+    }
+
+    .giftTitle {
+        font-size: 8px;
     }
 
     .giftDetail {
         font-size: 8px;
     }
 
-    .giftTime {
-        font-size: 8px;
-    }
-
-    #roomStats {
-        font-size: 9px;
-    }
-}
-
-@media (max-width: 430px) {
-
-    .mainContent {
-        grid-template-columns: minmax(0, 1fr) minmax(110px, 33%);
-        gap: 5px;
-    }
-
-    .page {
-        padding: 6px;
-    }
-
-    .inputFields {
-        gap: 5px;
-    }
-
-    #uniqueIdInput {
-        font-size: 14px;
-    }
-
-    #copyUrlButton {
-        padding: 0 9px;
-        font-size: 12px;
-    }
-
-    .giftcontainer > div {
-        padding: 4px;
-    }
-
-    .gifticon {
+    .miniprofilepicture {
         width: 28px;
         height: 28px;
+        min-width: 28px;
     }
 }
