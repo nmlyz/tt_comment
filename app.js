@@ -1,42 +1,58 @@
 // This will use the demo backend if you open index.html locally via file://,
 // otherwise sacrifice-nico.com will be used.
+
 let backendUrl =
     location.protocol === 'file:'
         ? "https://tiktok-chat-reader.zerody.one/"
         : "https://sacrifice-nico.com";
 
-let connection = new TikTokIOConnection(backendUrl);
+let connection =
+    new TikTokIOConnection(backendUrl);
 
+
+// ========================================
 // Counter
+// ========================================
+
 let viewerCount = 0;
 let likeCount = 0;
 let diamondsCount = 0;
 
-// These settings are defined by obs.html
+
+// ========================================
+// Settings
+// ========================================
+
 if (!window.settings) {
     window.settings = {};
 }
 
-/*
- * ============================================================
- * URL username support
- *
- * 例:
- * https://nmlyz.github.io/tt_comment/?username=r2csq
- *
- * usernameが存在する場合:
- * 1. 入力欄に表示
- * 2. 自動接続
- * ============================================================
- */
+
+// ========================================
+// Detected viewers
+// ========================================
+
+const detectedViewers = new Map();
+
+
+// ========================================
+// URL username
+// ========================================
 
 function getUsernameFromUrl() {
 
     const params =
-        new URLSearchParams(window.location.search);
+        new URLSearchParams(
+            window.location.search
+        );
 
     return params.get('username') || '';
 }
+
+
+// ========================================
+// Ready
+// ========================================
 
 $(document).ready(() => {
 
@@ -53,15 +69,44 @@ $(document).ready(() => {
             queryUsername;
     }
 
-    $('#connectButton').click(connect);
 
-    $('#uniqueIdInput').on('keyup', function(e) {
+    $('#connectButton').click(
+        connect
+    );
 
-        if (e.key === 'Enter') {
-            connect();
+
+    $('#uniqueIdInput').on(
+        'keyup',
+        function(e) {
+
+            if (e.key === 'Enter') {
+                connect();
+            }
+
         }
+    );
 
-    });
+
+    // ====================================
+    // Viewer menu
+    // ====================================
+
+    $('#viewerMenuButton').click(
+        openViewerMenu
+    );
+
+    $('#viewerMenuClose').click(
+        closeViewerMenu
+    );
+
+    $('#viewerMenuOverlay').click(
+        closeViewerMenu
+    );
+
+
+    // ====================================
+    // Auto connect
+    // ====================================
 
     if (window.settings.username) {
         connect();
@@ -69,27 +114,269 @@ $(document).ready(() => {
 });
 
 
+// ========================================
+// Viewer menu
+// ========================================
+
+function openViewerMenu() {
+
+    $('#viewerMenu')
+        .addClass('open')
+        .attr('aria-hidden', 'false');
+
+    $('#viewerMenuOverlay')
+        .addClass('open');
+
+    updateViewerMenu();
+}
+
+
+function closeViewerMenu() {
+
+    $('#viewerMenu')
+        .removeClass('open')
+        .attr('aria-hidden', 'true');
+
+    $('#viewerMenuOverlay')
+        .removeClass('open');
+}
+
+
+// ========================================
+// Get unique ID
+// ========================================
+
+function getDataUniqueId(data) {
+
+    if (!data) {
+        return '';
+    }
+
+    return (
+        data.uniqueId ||
+        (
+            data.user &&
+            data.user.displayId
+        ) ||
+        ''
+    );
+}
+
+
+// ========================================
+// Get nickname
+// ========================================
+
+function getDisplayName(data) {
+
+    if (!data) {
+        return '';
+    }
+
+    return (
+        data.nickname ||
+        (
+            data.user &&
+            data.user.nickname
+        ) ||
+        getDataUniqueId(data) ||
+        ''
+    );
+}
+
+
+// ========================================
+// Add detected viewer
+// ========================================
+
+function registerViewer(data) {
+
+    if (!data) {
+        return;
+    }
+
+    const uniqueId =
+        getDataUniqueId(data);
+
+    const userId =
+        data.userId ||
+        (
+            data.user &&
+            data.user.id
+        ) ||
+        '';
+
+
+    if (!uniqueId && !userId) {
+        return;
+    }
+
+
+    const key =
+        String(
+            userId ||
+            uniqueId
+        );
+
+
+    const viewer = {
+
+        key: key,
+
+        userId:
+            String(userId || ''),
+
+        uniqueId:
+            uniqueId,
+
+        nickname:
+            getDisplayName(data),
+
+        profilePictureUrl:
+            data.profilePictureUrl ||
+            (
+                data.user &&
+                data.user.profilePictureUrl
+            ) ||
+            ''
+    };
+
+
+    detectedViewers.set(
+        key,
+        viewer
+    );
+
+
+    updateViewerMenu();
+}
+
+
+// ========================================
+// Update viewer menu
+// ========================================
+
+function updateViewerMenu() {
+
+    const container =
+        $('#viewerList');
+
+
+    $('#viewerMenuCount').text(
+        detectedViewers.size.toLocaleString() +
+        '人'
+    );
+
+
+    if (detectedViewers.size === 0) {
+
+        container.html(
+            '<div class="viewerEmpty">' +
+            'まだ視聴者情報がありません' +
+            '</div>'
+        );
+
+        return;
+    }
+
+
+    const viewers =
+        Array.from(
+            detectedViewers.values()
+        );
+
+
+    // 新しく取得した順
+    viewers.reverse();
+
+
+    let html = '';
+
+
+    viewers.forEach(
+        viewer => {
+
+            const nickname =
+                sanitize(
+                    viewer.nickname ||
+                    viewer.uniqueId ||
+                    ''
+                );
+
+
+            const uniqueId =
+                sanitize(
+                    viewer.uniqueId ||
+                    ''
+                );
+
+
+            const image =
+                sanitize(
+                    viewer.profilePictureUrl ||
+                    ''
+                );
+
+
+            html +=
+                '<div class="viewerItem">' +
+
+                '<img ' +
+                'class="viewerItemPicture" ' +
+                'src="' +
+                image +
+                '"' +
+                '>' +
+
+                '<div class="viewerItemInfo">' +
+
+                '<span class="viewerItemName">' +
+                nickname +
+                '</span>' +
+
+                (
+                    uniqueId
+                        ? (
+                            '<span class="viewerItemId">' +
+                            '@' +
+                            uniqueId +
+                            '</span>'
+                        )
+                        : ''
+                ) +
+
+                '</div>' +
+
+                '</div>';
+        }
+    );
+
+
+    container.html(html);
+}
+
+
+// ========================================
+// Normalize unique ID
+// ========================================
+
 function normalizeUniqueId(value) {
 
     if (!value) {
         return '';
     }
 
-    value = String(value).trim();
+    value =
+        String(value).trim();
 
-    /*
-     * @username
-     */
+
     if (value.charAt(0) === '@') {
-        value = value.substring(1);
+
+        value =
+            value.substring(1);
     }
 
-    /*
-     * TikTok URL
-     *
-     * https://www.tiktok.com/@username
-     * https://www.tiktok.com/@username?...
-     */
+
     try {
 
         if (
@@ -103,13 +390,24 @@ function normalizeUniqueId(value) {
             let path =
                 url.pathname;
 
-            if (path.charAt(0) === '/') {
-                path = path.substring(1);
+
+            if (
+                path.charAt(0) === '/'
+            ) {
+
+                path =
+                    path.substring(1);
             }
 
-            if (path.charAt(0) === '@') {
-                path = path.substring(1);
+
+            if (
+                path.charAt(0) === '@'
+            ) {
+
+                path =
+                    path.substring(1);
             }
+
 
             value =
                 path.split('/')[0];
@@ -123,9 +421,14 @@ function normalizeUniqueId(value) {
         );
     }
 
+
     return value.trim();
 }
 
+
+// ========================================
+// Connect
+// ========================================
 
 function connect() {
 
@@ -133,62 +436,85 @@ function connect() {
         window.settings.username ||
         $('#uniqueIdInput').val();
 
+
     uniqueId =
-        normalizeUniqueId(uniqueId);
+        normalizeUniqueId(
+            uniqueId
+        );
+
 
     if (uniqueId !== '') {
 
-        // 入力欄も正規化後のIDにする
         $('#uniqueIdInput').val(
             uniqueId
         );
 
-        // URL経由の場合も設定を維持
-        if (window.settings.username) {
+
+        if (
+            window.settings.username
+        ) {
+
             window.settings.username =
                 uniqueId;
         }
+
 
         $('#stateText').text(
             'Connecting...'
         );
 
-        connection.connect(uniqueId, {
-            enableExtendedGiftInfo: true
-        }).then(state => {
 
-            $('#stateText').text(
-                'ルームID ' +
-                state.roomId +
-                ' に接続'
-            );
-
-            // reset stats
-            viewerCount = 0;
-            likeCount = 0;
-            diamondsCount = 0;
-
-            updateRoomStats();
-
-        }).catch(errorMessage => {
-
-            console.error(
-                'TikTok connection error:',
-                errorMessage
-            );
-
-            $('#stateText').text(
-                errorMessage
-            );
-
-            // schedule next try if obs username set
-            if (window.settings.username) {
-
-                setTimeout(() => {
-                    connect();
-                }, 30000);
+        connection.connect(
+            uniqueId,
+            {
+                enableExtendedGiftInfo:
+                    true
             }
-        });
+        ).then(
+            state => {
+
+                $('#stateText').text(
+                    'ルームID ' +
+                    state.roomId +
+                    ' に接続'
+                );
+
+
+                viewerCount = 0;
+                likeCount = 0;
+                diamondsCount = 0;
+
+
+                updateRoomStats();
+
+            }
+        ).catch(
+            errorMessage => {
+
+                console.error(
+                    'TikTok connection error:',
+                    errorMessage
+                );
+
+
+                $('#stateText').text(
+                    errorMessage
+                );
+
+
+                if (
+                    window.settings.username
+                ) {
+
+                    setTimeout(
+                        () => {
+                            connect();
+                        },
+                        30000
+                    );
+                }
+            }
+        );
 
     } else {
 
@@ -199,27 +525,53 @@ function connect() {
 }
 
 
-/**
- * Prevent Cross site scripting (XSS)
- */
+// ========================================
+// Sanitize
+// ========================================
+
 function sanitize(text) {
 
-    if (text === null || text === undefined) {
+    if (
+        text === null ||
+        text === undefined
+    ) {
+
         return '';
     }
 
+
     return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+        .replace(
+            /&/g,
+            '&amp;'
+        )
+        .replace(
+            /</g,
+            '&lt;'
+        )
+        .replace(
+            />/g,
+            '&gt;'
+        )
+        .replace(
+            /"/g,
+            '&quot;'
+        )
+        .replace(
+            /'/g,
+            '&#039;'
+        );
 }
 
+
+// ========================================
+// Room stats
+// ========================================
 
 function updateRoomStats() {
 
     $('#roomStats').html(
+
         '視聴者数: <b>' +
         viewerCount.toLocaleString() +
         '</b> いいね: <b>' +
@@ -227,25 +579,49 @@ function updateRoomStats() {
         '</b> ダイヤ: <b>' +
         diamondsCount.toLocaleString() +
         '</b>'
+
     );
 }
 
+
+// ========================================
+// Username link
+// ========================================
 
 function generateUsernameLink(data) {
 
     const uniqueId =
-        sanitize(data.uniqueId || '');
+        getDataUniqueId(data);
+
+
+    const displayName =
+        getDisplayName(data);
+
 
     return (
+
         '<a class="usernamelink" ' +
+
         'href="https://www.tiktok.com/@' +
-        encodeURIComponent(data.uniqueId || '') +
+
+        encodeURIComponent(
+            uniqueId
+        ) +
+
         '" target="_blank">' +
-        uniqueId +
+
+        sanitize(
+            displayName
+        ) +
+
         '</a>'
     );
 }
 
+
+// ========================================
+// Gift streak
+// ========================================
 
 function isPendingStreak(data) {
 
@@ -256,71 +632,142 @@ function isPendingStreak(data) {
 }
 
 
-/*
- * ============================================================
- * Duplicate comment protection
- *
- * 同じコメントが短時間に複数回送られてきた場合に
- * 同じ内容を最大3回表示してしまう問題を防ぐ。
- * ============================================================
- */
+// ========================================
+// Comment duplicate detection
+// ========================================
 
-const recentComments = new Map();
+const recentComments =
+    new Map();
 
-const COMMENT_DUPLICATE_WINDOW = 3000;
+const COMMENT_DUPLICATE_WINDOW =
+    3000;
 
 
-function getCommentKey(data, text) {
+function getCommentKey(
+    data,
+    text
+) {
+
+    /*
+     * 今回のログでは
+     *
+     * data.common.msgId
+     *
+     * にコメントIDが入っている。
+     *
+     * まずこれを使う。
+     */
 
     const messageId =
-        data.commentId ||
+
+        (
+            data.common &&
+            data.common.msgId
+        ) ||
+
         data.msgId ||
+
+        data.commentId ||
+
         data.messageId ||
+
         data.id;
 
-    if (messageId !== undefined && messageId !== null) {
 
-        return 'id:' + String(messageId);
+    if (
+        messageId !== undefined &&
+        messageId !== null
+    ) {
+
+        return (
+            'id:' +
+            String(messageId)
+        );
     }
 
+
+    /*
+     * IDが取れない場合だけ
+     * ユーザー + コメント本文
+     * を使う。
+     */
+
     return (
+
         'text:' +
-        String(data.userId || data.uniqueId || '') +
+
+        String(
+            data.userId ||
+            data.uniqueId ||
+            ''
+        ) +
+
         '|' +
-        String(text || '')
+
+        String(
+            text || ''
+        )
     );
 }
 
 
-function isDuplicateComment(data, text) {
+function isDuplicateComment(
+    data,
+    text
+) {
 
     const key =
-        getCommentKey(data, text);
+        getCommentKey(
+            data,
+            text
+        );
+
 
     const now =
         Date.now();
 
+
     const previous =
-        recentComments.get(key);
+        recentComments.get(
+            key
+        );
+
+
+    /*
+     * 3秒以内に同じものが来たら
+     * 重複として弾く。
+     */
 
     if (
         previous &&
-        now - previous < COMMENT_DUPLICATE_WINDOW
+        now - previous <
+        COMMENT_DUPLICATE_WINDOW
     ) {
 
         return true;
     }
+
 
     recentComments.set(
         key,
         now
     );
 
-    // 古いデータを削除
-    if (recentComments.size > 1000) {
+
+    /*
+     * 古い履歴を軽く掃除する。
+     */
+
+    if (
+        recentComments.size >
+        1000
+    ) {
 
         for (
-            const [oldKey, oldTime]
+            const [
+                oldKey,
+                oldTime
+            ]
             of recentComments
         ) {
 
@@ -328,26 +775,32 @@ function isDuplicateComment(data, text) {
                 now - oldTime >
                 COMMENT_DUPLICATE_WINDOW
             ) {
+
                 recentComments.delete(
                     oldKey
                 );
             }
 
+
             if (
-                recentComments.size <= 800
+                recentComments.size <=
+                800
             ) {
+
                 break;
             }
         }
     }
 
+
     return false;
 }
 
 
-/**
- * Add a new message to the chat container
- */
+// ========================================
+// Add chat item
+// ========================================
+
 function addChatItem(
     color,
     data,
@@ -356,9 +809,15 @@ function addChatItem(
 ) {
 
     let container =
-        location.href.includes('obs.html')
+
+        location.href.includes(
+            'obs.html'
+        )
+
             ? $('.eventcontainer')
+
             : $('.chatcontainer');
+
 
     if (
         container.find('div').length >
@@ -371,36 +830,57 @@ function addChatItem(
             .remove();
     }
 
+
     container
         .find('.temporary')
         .remove();
 
+
     container.append(
+
         '<div class="' +
+
         (
             summarize
                 ? 'temporary'
                 : 'static'
         ) +
+
         '">' +
 
-        '<img class="miniprofilepicture" ' +
+        '<img ' +
+        'class="miniprofilepicture" ' +
         'src="' +
+
         sanitize(
-            data.profilePictureUrl || ''
+            data.profilePictureUrl ||
+            ''
         ) +
+
         '">' +
 
         '<span>' +
 
         '<b>' +
-        generateUsernameLink(data) +
+
+        generateUsernameLink(
+            data
+        ) +
+
         ':</b> ' +
 
         '<span style="color:' +
-        sanitize(color || '') +
+
+        sanitize(
+            color || ''
+        ) +
+
         '">' +
-        sanitize(text) +
+
+        sanitize(
+            text
+        ) +
+
         '</span>' +
 
         '</span>' +
@@ -408,27 +888,37 @@ function addChatItem(
         '</div>'
     );
 
+
     container.stop();
+
 
     container.animate(
         {
             scrollTop:
-                container[0].scrollHeight
+                container[0]
+                    .scrollHeight
         },
         400
     );
 }
 
 
-/**
- * Add a new gift to the gift container
- */
+// ========================================
+// Add gift item
+// ========================================
+
 function addGiftItem(data) {
 
     let container =
-        location.href.includes('obs.html')
+
+        location.href.includes(
+            'obs.html'
+        )
+
             ? $('.eventcontainer')
+
             : $('.giftcontainer');
+
 
     if (
         container.find('div').length >
@@ -441,34 +931,56 @@ function addGiftItem(data) {
             .remove();
     }
 
+
     let streakId =
-        data.userId.toString() +
+
+        String(
+            data.userId || ''
+        ) +
+
         '_' +
-        data.giftId;
+
+        String(
+            data.giftId || ''
+        );
+
 
     let html =
+
         '<div data-streakid="' +
+
         (
             isPendingStreak(data)
                 ? sanitize(streakId)
                 : ''
         ) +
+
         '">' +
 
-        '<img class="miniprofilepicture" ' +
+        '<img ' +
+        'class="miniprofilepicture" ' +
         'src="' +
+
         sanitize(
-            data.profilePictureUrl || ''
+            data.profilePictureUrl ||
+            ''
         ) +
+
         '">' +
 
         '<span>' +
 
         '<b>' +
-        generateUsernameLink(data) +
+
+        generateUsernameLink(
+            data
+        ) +
+
         ':</b> ' +
 
-        sanitize(data.describe || '') +
+        sanitize(
+            data.describe || ''
+        ) +
 
         '<br>' +
 
@@ -480,10 +992,15 @@ function addGiftItem(data) {
 
         '<td>' +
 
-        '<img class="gifticon" src="' +
+        '<img ' +
+        'class="gifticon" ' +
+        'src="' +
+
         sanitize(
-            data.giftPictureUrl || ''
+            data.giftPictureUrl ||
+            ''
         ) +
+
         '">' +
 
         '</td>' +
@@ -491,41 +1008,62 @@ function addGiftItem(data) {
         '<td>' +
 
         '<span>' +
+
         'Name: <b>' +
-        sanitize(data.giftName || '') +
-        '</b> (ID:' +
-        sanitize(data.giftId || '') +
+
+        sanitize(
+            data.giftName ||
+            ''
+        ) +
+
+        '</b> ' +
+
+        '(ID:' +
+
+        sanitize(
+            data.giftId ||
+            ''
+        ) +
+
         ')' +
+
         '</span>' +
 
         '<br>' +
 
         '<span>' +
+
         'Repeat: <b style="' +
+
         (
             isPendingStreak(data)
                 ? 'color:red'
                 : ''
         ) +
+
         '">' +
 
         'x' +
+
         Number(
             data.repeatCount || 0
         ).toLocaleString() +
 
         '</b>' +
+
         '</span>' +
 
         '<br>' +
 
         '<span>' +
+
         'Cost: <b>' +
 
         (
             Number(
                 data.diamondCount || 0
             ) *
+
             Number(
                 data.repeatCount || 0
             )
@@ -547,6 +1085,7 @@ function addGiftItem(data) {
 
         '</div>';
 
+
     let existingStreakItem =
         container.find(
             "[data-streakid='" +
@@ -554,7 +1093,10 @@ function addGiftItem(data) {
             "']"
         );
 
-    if (existingStreakItem.length) {
+
+    if (
+        existingStreakItem.length
+    ) {
 
         existingStreakItem.replaceWith(
             html
@@ -567,19 +1109,25 @@ function addGiftItem(data) {
         );
     }
 
+
     container.stop();
+
 
     container.animate(
         {
             scrollTop:
-                container[0].scrollHeight
+                container[0]
+                    .scrollHeight
         },
         800
     );
 }
 
 
-// viewer stats
+// ========================================
+// Room user
+// ========================================
+
 connection.on(
     'roomUser',
     (msg) => {
@@ -598,10 +1146,16 @@ connection.on(
 );
 
 
-// like stats
+// ========================================
+// Like
+// ========================================
+
 connection.on(
     'like',
     (msg) => {
+
+        registerViewer(msg);
+
 
         if (
             typeof msg.totalLikeCount ===
@@ -614,12 +1168,15 @@ connection.on(
             updateRoomStats();
         }
 
+
         if (
             window.settings.showLikes ===
             "0"
         ) {
+
             return;
         }
+
 
         if (
             typeof msg.likeCount ===
@@ -629,9 +1186,13 @@ connection.on(
             let label =
                 msg.label || '';
 
+
             addChatItem(
+
                 '#447dd4',
+
                 msg,
+
                 label
                     .replace(
                         '{0:user}',
@@ -648,66 +1209,109 @@ connection.on(
 );
 
 
+// ========================================
 // Member join
+// ========================================
+
 let joinMsgDelay = 0;
 
 connection.on(
     'member',
     (msg) => {
 
+        registerViewer(msg);
+
+
         if (
             window.settings.showJoins ===
             "0"
         ) {
+
             return;
         }
 
+
         let addDelay = 250;
 
-        if (joinMsgDelay > 500) {
+
+        if (
+            joinMsgDelay > 500
+        ) {
+
             addDelay = 100;
         }
 
-        if (joinMsgDelay > 1000) {
+
+        if (
+            joinMsgDelay > 1000
+        ) {
+
             addDelay = 0;
         }
 
-        joinMsgDelay += addDelay;
 
-        setTimeout(() => {
+        joinMsgDelay +=
+            addDelay;
 
-            joinMsgDelay -= addDelay;
 
-            addChatItem(
-                '#21b2c2',
-                msg,
-                'joined',
-                true
-            );
+        setTimeout(
+            () => {
 
-        }, joinMsgDelay);
+                joinMsgDelay -=
+                    addDelay;
+
+
+                addChatItem(
+
+                    '#21b2c2',
+
+                    msg,
+
+                    'joined',
+
+                    true
+                );
+
+            },
+
+            joinMsgDelay
+        );
     }
 );
 
 
-// New chat comment received
+// ========================================
+// New chat comment
+// ========================================
+
 connection.on(
     'chat',
     (msg) => {
+
+        registerViewer(msg);
+
 
         if (
             window.settings.showChats ===
             "0"
         ) {
+
             return;
         }
+
 
         const comment =
             msg.comment || '';
 
+
         /*
-         * 重複コメント防止
+         * 重複コメントを弾く。
+         *
+         * 深い判定はせず、
+         * 同一ID・同一内容の短時間重複だけ
+         * 対象にする。
          */
+
         if (
             isDuplicateComment(
                 msg,
@@ -723,6 +1327,7 @@ connection.on(
             return;
         }
 
+
         addChatItem(
             '',
             msg,
@@ -732,61 +1337,98 @@ connection.on(
 );
 
 
-// New gift received
+// ========================================
+// Gift
+// ========================================
+
 connection.on(
     'gift',
     (data) => {
 
+        registerViewer(data);
+
+
         if (
             !isPendingStreak(data) &&
-            data.diamondCount > 0
+            Number(
+                data.diamondCount || 0
+            ) > 0
         ) {
 
             diamondsCount +=
-                data.diamondCount *
-                data.repeatCount;
+
+                Number(
+                    data.diamondCount || 0
+                ) *
+
+                Number(
+                    data.repeatCount || 0
+                );
+
 
             updateRoomStats();
         }
+
 
         if (
             window.settings.showGifts ===
             "0"
         ) {
+
             return;
         }
+
 
         addGiftItem(data);
     }
 );
 
 
-// share, follow
+// ========================================
+// Share / Follow
+// ========================================
+
 connection.on(
     'social',
     (data) => {
+
+        registerViewer(data);
+
 
         if (
             window.settings.showFollows ===
             "0"
         ) {
+
             return;
         }
+
 
         let displayType =
             data.displayType || '';
 
+
         let color =
-            displayType.includes('follow')
+
+            displayType.includes(
+                'follow'
+            )
+
                 ? '#ff005e'
+
                 : '#2fb816';
+
 
         let label =
             data.label || '';
 
+
         addChatItem(
+
             color,
+
             data,
+
             label.replace(
                 '{0:user}',
                 ''
@@ -796,6 +1438,10 @@ connection.on(
 );
 
 
+// ========================================
+// Stream end
+// ========================================
+
 connection.on(
     'streamEnd',
     () => {
@@ -804,14 +1450,17 @@ connection.on(
             '配信は終了しました。'
         );
 
-        // schedule next try if obs username set
+
         if (
             window.settings.username
         ) {
 
-            setTimeout(() => {
-                connect();
-            }, 30000);
+            setTimeout(
+                () => {
+                    connect();
+                },
+                30000
+            );
         }
     }
 );

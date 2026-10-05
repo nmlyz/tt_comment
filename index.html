@@ -2,9 +2,14 @@
 <html lang="ja">
 <head>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-7GL4J23WD7"></script>
+
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+
         gtag('js', new Date());
         gtag('config', 'G-7GL4J23WD7');
     </script>
@@ -12,10 +17,18 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>TikTok LIVE コメントビューアー|コメビュ</title>
 
-    <meta name="description" content="TikTok LIVEのコメントビューアー">
-    <meta name="keywords" content="TikTok,Live,ライブ,コメント,コメビュ,コメントビューアー,コメントビューワー">
+    <meta
+        name="description"
+        content="TikTok LIVEのコメントビューアー"
+    >
+
+    <meta
+        name="keywords"
+        content="TikTok,Live,ライブ,コメント,コメビュ,コメントビューアー,コメントビューワー"
+    >
 
     <link rel="icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css">
@@ -40,15 +53,15 @@
             let username = $('#uniqueIdInput').val();
 
             let url =
-                'obs.html?username=' + encodeURIComponent(username) +
-                '&showLikes=1' +
-                '&showChats=1' +
-                '&showGifts=1' +
-                '&showFollows=1' +
-                '&showJoins=1' +
-                '&bgColor=rgb(24,23,28)' +
-                '&fontColor=rgb(227,229,235)' +
-                '&fontSize=1.3em';
+                `/obs.html?username=${encodeURIComponent(username)}` +
+                `&showLikes=1` +
+                `&showChats=1` +
+                `&showGifts=1` +
+                `&showFollows=1` +
+                `&showJoins=1` +
+                `&bgColor=rgb(24,23,28)` +
+                `&fontColor=rgb(227,229,235)` +
+                `&fontSize=1.3em`;
 
             if (username) {
                 window.open(url, '_blank');
@@ -62,16 +75,35 @@
 <body>
 
     <header class="head">
-        <img src="./logo.png" alt="TikTok LIVE コメントビューアー" height="32">
+        <img
+            src="./logo.png"
+            alt="TikTok LIVE コメントビューアー"
+            height="32"
+        >
+
+        <!-- 視聴者メニュー -->
+        <button
+            id="viewerMenuButton"
+            class="viewerMenuButton"
+            type="button"
+            aria-label="視聴者メニュー"
+        >
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
     </header>
 
     <div class="inputFields">
         <input
             type="text"
             id="uniqueIdInput"
-            placeholder="ユーザーIDかURL を入力...">
+            placeholder="ユーザーIDかURL を入力..."
+        >
 
-        <button id="connectButton">接続</button>
+        <button id="connectButton">
+            接続
+        </button>
     </div>
 
     <div class="statusBar">
@@ -82,11 +114,15 @@
     <div class="mainContent">
 
         <div class="chatcontainer">
-            <h3 class="containerheader">チャット</h3>
+            <h3 class="containerheader">
+                チャット
+            </h3>
         </div>
 
         <div class="giftcontainer">
-            <h3 class="containerheader">ギフト</h3>
+            <h3 class="containerheader">
+                ギフト
+            </h3>
         </div>
 
     </div>
@@ -94,10 +130,64 @@
     <footer class="siteFooter">
         <a
             href="https://www.tiktok.com/@sacrifice_nico"
-            target="_blank">
+            target="_blank"
+        >
             @sacrifice_nico
         </a>
     </footer>
+
+
+    <!-- ================================ -->
+    <!-- 視聴者サイドメニュー -->
+    <!-- ================================ -->
+
+    <div
+        id="viewerMenuOverlay"
+        class="viewerMenuOverlay"
+    ></div>
+
+    <aside
+        id="viewerMenu"
+        class="viewerMenu"
+        aria-hidden="true"
+    >
+
+        <div class="viewerMenuHeader">
+
+            <div>
+                <div class="viewerMenuTitle">
+                    視聴者
+                </div>
+
+                <div
+                    id="viewerMenuCount"
+                    class="viewerMenuCount"
+                >
+                    0人
+                </div>
+            </div>
+
+            <button
+                id="viewerMenuClose"
+                class="viewerMenuClose"
+                type="button"
+                aria-label="閉じる"
+            >
+                ×
+            </button>
+
+        </div>
+
+        <div
+            id="viewerList"
+            class="viewerList"
+        >
+            <div class="viewerEmpty">
+                まだ視聴者情報がありません
+            </div>
+        </div>
+
+    </aside>
 
 </body>
 </html>
