@@ -19,28 +19,41 @@ let likeMessageDisplayed = false;
    GIFT AUDIO
 ========================================================= */
 
+let giftAudio = null;
+let giftAudioUnlocked = false;
+
 let giftAudioEnabled = true;
 
-let giftAudioUrl = './tegami.mp3';
+let giftAudioUrl = './gift.mp3';
 
 let rareGiftAudioUrl = './sakibare.mp3';
 
-let giftAudioUnlocked = false;
+let superRareGiftAudioUrl = './durandal.mp3';
 
-let giftAudioElements = {};
-
-let playingGiftAudios = [];
+const giftAudioPool = [];
+const GIFT_AUDIO_POOL_SIZE = 8;
 
 
 /* =========================================================
    GIFT DUPLICATE
 ========================================================= */
 
-const GIFT_DUPLICATE_WINDOW = 5000;
-
-const recentGifts = new Map();
-
-const activeGiftStreaks = new Set();
+/*
+ * 同じ
+ *
+ * userId
+ * +
+ * giftId
+ * +
+ * createTime
+ *
+ * のギフトを重複として扱う。
+ *
+ * 同じギフトイベントがサーバーから
+ * 複数回送られてきた場合でも、
+ * リストには1件だけ追加する。
+ */
+const displayedGiftKeys = new Set();
 
 
 /* =========================================================
@@ -67,7 +80,7 @@ if (!window.settings) {
 
 
 /* =========================================================
-   USERNAME
+   URL / USER ID
 ========================================================= */
 
 function normalizeUniqueId(value) {
@@ -89,19 +102,12 @@ function normalizeUniqueId(value) {
             value.startsWith('https://')
         ) {
 
-            const url =
-                new URL(value);
+            const url = new URL(value);
 
             const match =
-                url.pathname.match(
-                    /@([^/]+)/
-                );
+                url.pathname.match(/@([^/]+)/);
 
-            if (
-                match &&
-                match[1]
-            ) {
-
+            if (match && match[1]) {
                 return match[1];
             }
         }
@@ -114,21 +120,13 @@ function normalizeUniqueId(value) {
         );
     }
 
-    if (
-        value.startsWith('@')
-    ) {
-
-        value =
-            value.substring(1);
+    if (value.startsWith('@')) {
+        value = value.substring(1);
     }
 
     return value.trim();
 }
 
-
-/* =========================================================
-   URL SETTINGS
-========================================================= */
 
 function loadUrlSettings() {
 
@@ -138,33 +136,20 @@ function loadUrlSettings() {
         );
 
     const username =
-        params.get(
-            'username'
-        );
+        params.get('username');
 
     if (username) {
 
         window.settings.username =
-            normalizeUniqueId(
-                username
-            );
+            normalizeUniqueId(username);
     }
 
-    params.forEach(
-        function (
-            value,
-            key
-        ) {
+    params.forEach((value, key) => {
 
-            if (
-                key !== 'username'
-            ) {
-
-                window.settings[key] =
-                    value;
-            }
+        if (key !== 'username') {
+            window.settings[key] = value;
         }
-    );
+    });
 
     if (
         window.settings.giftSound
@@ -175,28 +160,28 @@ function loadUrlSettings() {
                 window.settings.giftSound
             ).trim();
 
-        if (
-            !giftAudioUrl
-        ) {
-
-            giftAudioUrl =
-                './tegami.mp3';
+        if (!giftAudioUrl) {
+            giftAudioUrl = './gift.mp3';
         }
     }
 
+    /*
+     * giftMute
+     *
+     * 0 = ON
+     * 1 = OFF
+     */
     if (
         window.settings.giftMute === '1'
     ) {
 
-        giftAudioEnabled =
-            false;
+        giftAudioEnabled = false;
 
     } else if (
         window.settings.giftMute === '0'
     ) {
 
-        giftAudioEnabled =
-            true;
+        giftAudioEnabled = true;
     }
 }
 
@@ -210,10 +195,7 @@ function setupGiftAudioButton() {
     const button =
         $('#giftAudioButton');
 
-    if (
-        !button.length
-    ) {
-
+    if (!button.length) {
         return;
     }
 
@@ -241,16 +223,11 @@ function updateGiftAudioButton() {
     const button =
         $('#giftAudioButton');
 
-    if (
-        !button.length
-    ) {
-
+    if (!button.length) {
         return;
     }
 
-    if (
-        giftAudioEnabled
-    ) {
+    if (giftAudioEnabled) {
 
         button.text(
             '🔊'
@@ -284,7 +261,7 @@ function updateGiftAudioButton() {
 
 
 /* =========================================================
-   CHAT AUTO SCROLL
+   CHAT AUTO SCROLL BUTTON
 ========================================================= */
 
 function setupChatAutoScrollButton() {
@@ -292,10 +269,7 @@ function setupChatAutoScrollButton() {
     const button =
         $('#chatAutoScrollButton');
 
-    if (
-        !button.length
-    ) {
-
+    if (!button.length) {
         return;
     }
 
@@ -330,16 +304,11 @@ function updateChatAutoScrollButton() {
     const button =
         $('#chatAutoScrollButton');
 
-    if (
-        !button.length
-    ) {
-
+    if (!button.length) {
         return;
     }
 
-    if (
-        chatAutoScrollEnabled
-    ) {
+    if (chatAutoScrollEnabled) {
 
         button.text(
             '↓'
@@ -377,31 +346,25 @@ function scrollChatToBottom() {
     const container =
         $('.chatcontainer');
 
-    if (
-        !container.length
-    ) {
-
+    if (!container.length) {
         return;
     }
 
-    const element =
-        container[0];
+    container.stop();
 
-    element.scrollTop =
-        element.scrollHeight;
-
-    requestAnimationFrame(
-        function () {
-
-            element.scrollTop =
-                element.scrollHeight;
-        }
+    container.animate(
+        {
+            scrollTop:
+                container[0]
+                    .scrollHeight
+        },
+        400
     );
 }
 
 
 /* =========================================================
-   GIFT EXPAND
+   GIFT EXPAND BUTTON
 ========================================================= */
 
 function setupGiftExpandButton() {
@@ -409,10 +372,7 @@ function setupGiftExpandButton() {
     const button =
         $('#giftExpandButton');
 
-    if (
-        !button.length
-    ) {
-
+    if (!button.length) {
         return;
     }
 
@@ -443,16 +403,11 @@ function updateGiftExpandedState() {
     const button =
         $('#giftExpandButton');
 
-    if (
-        !mainContent.length
-    ) {
-
+    if (!mainContent.length) {
         return;
     }
 
-    if (
-        giftExpanded
-    ) {
+    if (giftExpanded) {
 
         mainContent.addClass(
             'giftExpanded'
@@ -497,371 +452,58 @@ function updateGiftExpandedState() {
    READY
 ========================================================= */
 
-$(document).ready(
-    function () {
+$(document).ready(() => {
 
-        loadUrlSettings();
+    loadUrlSettings();
 
-        setupGiftAudioButton();
+    setupGiftAudioButton();
 
-        setupChatAutoScrollButton();
+    setupChatAutoScrollButton();
 
-        setupGiftExpandButton();
+    setupGiftExpandButton();
 
-        $('#connectButton').click(
-            function () {
+    $('#connectButton').click(function () {
 
-                /*
-                 * ユーザー操作中に
-                 * 両方の音声を解禁する。
-                 */
-                unlockGiftAudio();
+        unlockGiftAudio();
 
+        connect();
+    });
+
+    $('#uniqueIdInput').on(
+        'keyup',
+        function (e) {
+
+            if (e.key === 'Enter') {
                 connect();
-            }
-        );
-
-        $('#uniqueIdInput').on(
-            'keyup',
-            function (e) {
-
-                if (
-                    e.key === 'Enter'
-                ) {
-
-                    connect();
-                }
-            }
-        );
-
-        $('#copyUrlButton').click(
-            copyQueryUrl
-        );
-
-        $('#viewerMenuButton').click(
-            openViewerMenu
-        );
-
-        $('#viewerMenuClose').click(
-            closeViewerMenu
-        );
-
-        $('#viewerMenuOverlay').click(
-            closeViewerMenu
-        );
-
-        if (
-            window.settings.username
-        ) {
-
-            $('#uniqueIdInput').val(
-                window.settings.username
-            );
-
-            connect();
-        }
-    }
-);
-
-
-/* =========================================================
-   AUDIO UNLOCK
-========================================================= */
-
-function unlockGiftAudio() {
-
-    /*
-     * すでに解禁済みなら何もしない。
-     */
-    if (
-        giftAudioUnlocked
-    ) {
-
-        return;
-    }
-
-    const urls = [
-        giftAudioUrl,
-        rareGiftAudioUrl
-    ];
-
-    let completed = 0;
-
-    urls.forEach(
-        function (url) {
-
-            try {
-
-                /*
-                 * 音声ファイルごとに
-                 * 専用Audioを作る。
-                 */
-                const audio =
-                    new Audio(url);
-
-                audio.preload =
-                    'auto';
-
-                audio.volume =
-                    1.0;
-
-                /*
-                 * ユーザー操作中なので
-                 * mutedでplayしてブラウザに
-                 * 音声再生許可を取得する。
-                 */
-                audio.muted =
-                    true;
-
-                giftAudioElements[url] =
-                    audio;
-
-                const promise =
-                    audio.play();
-
-                if (
-                    promise
-                ) {
-
-                    promise.then(
-                        function () {
-
-                            audio.pause();
-
-                            audio.currentTime =
-                                0;
-
-                            audio.muted =
-                                false;
-
-                            completed++;
-
-                            if (
-                                completed >=
-                                urls.length
-                            ) {
-
-                                giftAudioUnlocked =
-                                    true;
-                            }
-
-                        }
-                    ).catch(
-                        function (error) {
-
-                            console.warn(
-                                'Audio unlock failed:',
-                                url,
-                                error
-                            );
-
-                            /*
-                             * 片方失敗しても
-                             * もう片方は処理する。
-                             */
-                            completed++;
-
-                            if (
-                                completed >=
-                                urls.length
-                            ) {
-
-                                giftAudioUnlocked =
-                                    true;
-                            }
-                        }
-                    );
-
-                } else {
-
-                    audio.pause();
-
-                    audio.currentTime =
-                        0;
-
-                    audio.muted =
-                        false;
-
-                    completed++;
-
-                    if (
-                        completed >=
-                        urls.length
-                    ) {
-
-                        giftAudioUnlocked =
-                            true;
-                    }
-                }
-
-            } catch (error) {
-
-                console.warn(
-                    'Audio setup failed:',
-                    url,
-                    error
-                );
-
-                completed++;
-
-                if (
-                    completed >=
-                    urls.length
-                ) {
-
-                    giftAudioUnlocked =
-                        true;
-                }
             }
         }
     );
-}
 
+    $('#copyUrlButton').click(
+        copyQueryUrl
+    );
 
-/* =========================================================
-   PLAY GIFT SOUND
-========================================================= */
+    $('#viewerMenuButton').click(
+        openViewerMenu
+    );
 
-function playGiftSound() {
+    $('#viewerMenuClose').click(
+        closeViewerMenu
+    );
 
-    if (
-        !giftAudioEnabled
-    ) {
+    $('#viewerMenuOverlay').click(
+        closeViewerMenu
+    );
 
-        return;
+    if (window.settings.username) {
+
+        $('#uniqueIdInput').val(
+            window.settings.username
+        );
+
+        connect();
     }
-
-    if (
-        !giftAudioUnlocked
-    ) {
-
-        console.warn(
-            'Gift audio is not unlocked.'
-        );
-
-        return;
-    }
-
-    /*
-     * 1～50
-     *
-     * 1      = sakibare
-     * 2～50  = tegami
-     */
-    const random =
-        Math.floor(
-            Math.random() * 50
-        ) + 1;
-
-    let soundUrl;
-
-    if (
-        random === 1
-    ) {
-
-        soundUrl =
-            rareGiftAudioUrl;
-
-    } else {
-
-        soundUrl =
-            giftAudioUrl;
-    }
-
-    try {
-
-        /*
-         * 解禁時に作ったAudioを
-         * 直接使わず、同じURLの
-         * 新しいAudioを作成する。
-         *
-         * これにより前の音声が
-         * 再生中でも重ねられる。
-         */
-        const audio =
-            new Audio(soundUrl);
-
-        audio.preload =
-            'auto';
-
-        audio.volume =
-            1.0;
-
-        audio.muted =
-            false;
-
-        /*
-         * 再生中Audioを保持。
-         * iOS/SafariでGCされるのを防ぐ。
-         */
-        playingGiftAudios.push(
-            audio
-        );
-
-        const cleanup =
-            function () {
-
-                const index =
-                    playingGiftAudios.indexOf(
-                        audio
-                    );
-
-                if (
-                    index !== -1
-                ) {
-
-                    playingGiftAudios.splice(
-                        index,
-                        1
-                    );
-                }
-            };
-
-        audio.addEventListener(
-            'ended',
-            cleanup,
-            {
-                once: true
-            }
-        );
-
-        audio.addEventListener(
-            'error',
-            cleanup,
-            {
-                once: true
-            }
-        );
-
-        const promise =
-            audio.play();
-
-        if (
-            promise
-        ) {
-
-            promise.catch(
-                function (error) {
-
-                    console.warn(
-                        'Gift audio playback failed:',
-                        soundUrl,
-                        error
-                    );
-
-                    cleanup();
-                }
-            );
-        }
-
-    } catch (error) {
-
-        console.warn(
-            'Gift audio error:',
-            error
-        );
-    }
-}
+});
 
 
 /* =========================================================
@@ -870,22 +512,14 @@ function playGiftSound() {
 
 function connect() {
 
-    recentGifts.clear();
-
-    activeGiftStreaks.clear();
-
     let uniqueId =
         window.settings.username ||
         $('#uniqueIdInput').val();
 
     uniqueId =
-        normalizeUniqueId(
-            uniqueId
-        );
+        normalizeUniqueId(uniqueId);
 
-    if (
-        uniqueId !== ''
-    ) {
+    if (uniqueId !== '') {
 
         $('#stateText').text(
             '接続中...'
@@ -896,54 +530,38 @@ function connect() {
             {
                 enableExtendedGiftInfo: true
             }
-        ).then(
-            function (state) {
+        ).then(state => {
 
-                $('#stateText').text(
-                    '接続:' +
-                    state.roomId
-                );
+            $('#stateText').text(
+                'ルームID ' +
+                state.roomId +
+                ' に接続'
+            );
 
-                viewerCount = 0;
+            viewerCount = 0;
+            likeCount = 0;
+            diamondsCount = 0;
 
-                likeCount = 0;
+            viewerMap.clear();
 
-                diamondsCount = 0;
+            updateRoomStats();
+            updateViewerList();
 
-                viewerMap.clear();
+        }).catch(errorMessage => {
 
-                recentGifts.clear();
+            $('#stateText').text(
+                String(errorMessage)
+            );
 
-                activeGiftStreaks.clear();
+            if (window.settings.username) {
 
-                updateRoomStats();
+                setTimeout(() => {
 
-                updateViewerList();
+                    connect();
+
+                }, 30000);
             }
-        ).catch(
-            function (errorMessage) {
-
-                $('#stateText').text(
-                    String(
-                        errorMessage
-                    )
-                );
-
-                if (
-                    window.settings.username
-                ) {
-
-                    setTimeout(
-                        function () {
-
-                            connect();
-
-                        },
-                        30000
-                    );
-                }
-            }
-        );
+        });
 
     } else {
 
@@ -955,7 +573,7 @@ function connect() {
 
 
 /* =========================================================
-   COPY QUERY URL
+   QUERY URL COPY
 ========================================================= */
 
 function copyQueryUrl() {
@@ -964,13 +582,9 @@ function copyQueryUrl() {
         $('#uniqueIdInput').val();
 
     username =
-        normalizeUniqueId(
-            username
-        );
+        normalizeUniqueId(username);
 
-    if (
-        !username
-    ) {
+    if (!username) {
 
         alert(
             'ユーザーIDを入力してください。'
@@ -1019,10 +633,8 @@ function copyQueryUrl() {
         navigator.clipboard.writeText
     ) {
 
-        navigator.clipboard.writeText(
-            url
-        ).then(
-            function () {
+        navigator.clipboard.writeText(url)
+            .then(() => {
 
                 const button =
                     $('#copyUrlButton');
@@ -1034,23 +646,19 @@ function copyQueryUrl() {
                     'コピーしました'
                 );
 
-                setTimeout(
-                    function () {
+                setTimeout(() => {
 
-                        button.text(
-                            oldText
-                        );
+                    button.text(
+                        oldText
+                    );
 
-                    },
-                    1500
-                );
-            }
-        ).catch(
-            function () {
+                }, 1500);
+
+            })
+            .catch(() => {
 
                 fallbackCopy(url);
-            }
-        );
+            });
 
     } else {
 
@@ -1091,16 +699,13 @@ function fallbackCopy(text) {
             'コピーしました'
         );
 
-        setTimeout(
-            function () {
+        setTimeout(() => {
 
-                $('#copyUrlButton').text(
-                    'URLコピー'
-                );
+            $('#copyUrlButton').text(
+                'URLコピー'
+            );
 
-            },
-            1500
-        );
+        }, 1500);
 
     } catch (e) {
 
@@ -1117,7 +722,7 @@ function fallbackCopy(text) {
 
 
 /* =========================================================
-   OBS OVERLAY
+   OBS
 ========================================================= */
 
 function generateOverlay() {
@@ -1126,16 +731,12 @@ function generateOverlay() {
         $('#uniqueIdInput').val();
 
     username =
-        normalizeUniqueId(
-            username
-        );
+        normalizeUniqueId(username);
 
-    if (
-        !username
-    ) {
+    if (!username) {
 
         alert(
-            'ユーザーIDを入力してください。'
+            "ユーザーIDを入力してください。"
         );
 
         return;
@@ -1205,7 +806,7 @@ function generateOverlay() {
 
 
 /* =========================================================
-   SANITIZE
+   BASIC
 ========================================================= */
 
 function sanitize(text) {
@@ -1242,13 +843,10 @@ function sanitize(text) {
 }
 
 
-/* =========================================================
-   ROOM STATS
-========================================================= */
-
 function updateRoomStats() {
 
     $('#roomStats').html(
+
         '視聴者数: <b>' +
         viewerCount.toLocaleString() +
         '</b>　いいね: <b>' +
@@ -1265,10 +863,6 @@ function updateRoomStats() {
 }
 
 
-/* =========================================================
-   USERNAME LINK
-========================================================= */
-
 function generateUsernameLink(data) {
 
     const uniqueId =
@@ -1280,23 +874,16 @@ function generateUsernameLink(data) {
         '';
 
     const safeId =
-        sanitize(
-            uniqueId
-        );
+        sanitize(uniqueId);
 
-    if (
-        !safeId
-    ) {
-
+    if (!safeId) {
         return 'ユーザー';
     }
 
     return (
         '<a class="usernamelink" ' +
         'href="https://www.tiktok.com/@' +
-        encodeURIComponent(
-            uniqueId
-        ) +
+        encodeURIComponent(uniqueId) +
         '" target="_blank">' +
         safeId +
         '</a>'
@@ -1305,7 +892,7 @@ function generateUsernameLink(data) {
 
 
 /* =========================================================
-   COMMENT DUPLICATE
+   DUPLICATE COMMENT
 ========================================================= */
 
 function getCommentDuplicateKey(data) {
@@ -1316,12 +903,10 @@ function getCommentDuplicateKey(data) {
         data.common.msgId
     ) {
 
-        return (
-            'msg:' +
+        return 'msg:' +
             String(
                 data.common.msgId
-            )
-        );
+            );
     }
 
     if (
@@ -1329,12 +914,8 @@ function getCommentDuplicateKey(data) {
         data.msgId
     ) {
 
-        return (
-            'msg:' +
-            String(
-                data.msgId
-            )
-        );
+        return 'msg:' +
+            String(data.msgId);
     }
 
     if (
@@ -1343,12 +924,8 @@ function getCommentDuplicateKey(data) {
         data.common.logId
     ) {
 
-        return (
-            'log:' +
-            String(
-                data.common.logId
-            )
-        );
+        return 'log:' +
+            String(data.common.logId);
     }
 
     const userId =
@@ -1389,14 +966,9 @@ function getCommentDuplicateKey(data) {
 function isDuplicateComment(data) {
 
     const key =
-        getCommentDuplicateKey(
-            data
-        );
+        getCommentDuplicateKey(data);
 
-    if (
-        !key
-    ) {
-
+    if (!key) {
         return false;
     }
 
@@ -1439,7 +1011,7 @@ function isDuplicateComment(data) {
 
 
 /* =========================================================
-   GIFT DUPLICATE
+   GIFT
 ========================================================= */
 
 function isPendingStreak(data) {
@@ -1452,109 +1024,307 @@ function isPendingStreak(data) {
 }
 
 
+/* =========================================================
+   GIFT DUPLICATE KEY
+========================================================= */
+
+/*
+ * 同じ時間の同じギフトを判定する。
+ *
+ * userId
+ * giftId
+ * createTime
+ *
+ * の3つを組み合わせる。
+ */
 function getGiftDuplicateKey(data) {
 
     const userId =
         data &&
-        (
-            data.userId ||
-            (
-                data.user &&
-                (
-                    data.user.id ||
-                    data.user.idStr
-                )
-            )
-        );
+        data.userId !== undefined &&
+        data.userId !== null
+            ? String(data.userId)
+            : '';
 
     const giftId =
         data &&
-        (
-            data.giftId ||
-            data.giftName ||
-            ''
-        );
+        data.giftId !== undefined &&
+        data.giftId !== null
+            ? String(data.giftId)
+            : '';
+
+    let createTime = '';
 
     if (
-        !userId &&
-        !giftId
+        data &&
+        data.common &&
+        data.common.createTime !== undefined &&
+        data.common.createTime !== null
     ) {
 
-        return null;
+        createTime =
+            String(
+                data.common.createTime
+            );
+
+    } else if (
+        data &&
+        data.createTime !== undefined &&
+        data.createTime !== null
+    ) {
+
+        createTime =
+            String(
+                data.createTime
+            );
     }
 
+    /*
+     * createTimeが存在する場合
+     */
+    if (createTime) {
+
+        return (
+            userId +
+            '_' +
+            giftId +
+            '_' +
+            createTime
+        );
+    }
+
+    /*
+     * createTimeが取得できない場合は
+     * 重複判定を邪魔しないよう、
+     * userId + giftId を使用。
+     */
     return (
-        String(
-            userId || ''
-        ) +
+        userId +
         '_' +
-        String(
-            giftId || ''
-        )
+        giftId
     );
 }
 
 
-function isDuplicateGift(data) {
-
-    const key =
-        getGiftDuplicateKey(
-            data
-        );
+/*
+ * ギフト音を複数個あらかじめ用意する。
+ *
+ * これにより、
+ *
+ * gift 1 → 再生中
+ * gift 2 → 別Audioで再生
+ * gift 3 → 別Audioで再生
+ *
+ * のように重ねて再生できる。
+ */
+function prepareGiftAudioPool() {
 
     if (
-        !key
+        giftAudioPool.length > 0
     ) {
 
-        return false;
+        return;
     }
-
-    const now =
-        Date.now();
 
     for (
-        const [
-            oldKey,
-            timestamp
-        ]
-        of recentGifts.entries()
+        let i = 0;
+        i < GIFT_AUDIO_POOL_SIZE;
+        i++
     ) {
 
-        if (
-            now - timestamp >
-            GIFT_DUPLICATE_WINDOW
-        ) {
-
-            recentGifts.delete(
-                oldKey
+        const audio =
+            new Audio(
+                giftAudioUrl
             );
-        }
+
+        audio.preload =
+            'auto';
+
+        audio.volume =
+            1.0;
+
+        giftAudioPool.push(
+            audio
+        );
     }
 
+    /*
+     * 従来の変数も維持
+     */
     if (
-        recentGifts.has(key)
+        !giftAudio &&
+        giftAudioPool.length > 0
     ) {
 
-        recentGifts.set(
-            key,
-            now
-        );
-
-        return true;
+        giftAudio =
+            giftAudioPool[0];
     }
-
-    recentGifts.set(
-        key,
-        now
-    );
-
-    return false;
 }
 
 
-/* =========================================================
-   GIFT TIME
-========================================================= */
+/*
+ * Connectボタンを押したときだけ
+ * 無音でAudioを再生して、
+ * iPhone等のブラウザ側の
+ * Audio再生許可を取得する。
+ *
+ * ここでは絶対に音を鳴らさない。
+ */
+function unlockGiftAudio() {
+
+    if (
+        giftAudioUnlocked
+    ) {
+
+        return;
+    }
+
+    try {
+
+        prepareGiftAudioPool();
+
+        const audio =
+            giftAudioPool[0];
+
+        audio.muted =
+            true;
+
+        audio.currentTime =
+            0;
+
+        const promise =
+            audio.play();
+
+        if (promise) {
+
+            promise.then(() => {
+
+                audio.pause();
+
+                audio.currentTime =
+                    0;
+
+                audio.muted =
+                    false;
+
+                giftAudioUnlocked =
+                    true;
+
+            }).catch(error => {
+
+                audio.muted =
+                    false;
+
+                console.warn(
+                    'Gift audio unlock failed:',
+                    error
+                );
+            });
+        }
+
+    } catch (e) {
+
+        console.warn(
+            'Gift audio unlock failed:',
+            e
+        );
+    }
+}
+
+
+/*
+ * ギフト音の抽選
+ *
+ * 1       → durandal.mp3  1/100
+ * 2～3    → sakibare.mp3  2/100 = 1/50
+ * 4～100  → gift.mp3      97/100
+ */
+function playGiftSound() {
+
+    if (!giftAudioEnabled) {
+        return;
+    }
+
+    try {
+
+        const random =
+            Math.floor(
+                Math.random() * 100
+            ) + 1;
+
+        let soundUrl =
+            giftAudioUrl;
+
+        /*
+         * 1 / 100
+         *
+         * durandal.mp3
+         */
+        if (
+            random === 1
+        ) {
+
+            soundUrl =
+                superRareGiftAudioUrl;
+
+        /*
+         * 2 / 100
+         *
+         * = 1 / 50
+         *
+         * sakibare.mp3
+         */
+        } else if (
+            random === 2 ||
+            random === 3
+        ) {
+
+            soundUrl =
+                rareGiftAudioUrl;
+        }
+
+        /*
+         * 選ばれた音声を
+         * 毎回新しいAudioで再生。
+         *
+         * 再生中でも重ねて再生可能。
+         */
+        const audio =
+            new Audio(
+                soundUrl
+            );
+
+        audio.preload =
+            'auto';
+
+        audio.volume =
+            1.0;
+
+        const promise =
+            audio.play();
+
+        if (promise) {
+
+            promise.catch(
+                function (error) {
+
+                    console.warn(
+                        'Gift audio playback blocked:',
+                        error
+                    );
+                }
+            );
+        }
+
+    } catch (e) {
+
+        console.warn(
+            'Gift audio error:',
+            e
+        );
+    }
+}
+
 
 function formatGiftTime() {
 
@@ -1572,10 +1342,6 @@ function formatGiftTime() {
 }
 
 
-/* =========================================================
-   ADD GIFT
-========================================================= */
-
 function addGiftItem(data) {
 
     let container =
@@ -1592,11 +1358,66 @@ function addGiftItem(data) {
 
         container
             .find('div')
-            .slice(
-                0,
-                100
-            )
+            .slice(0, 100)
             .remove();
+    }
+
+    /*
+     * ============================================
+     * ギフト重複防止
+     * ============================================
+     *
+     * 同じ userId
+     * +
+     * 同じ giftId
+     * +
+     * 同じ createTime
+     *
+     * のイベントは1回だけ表示する。
+     */
+    const giftDuplicateKey =
+        getGiftDuplicateKey(data);
+
+    if (
+        displayedGiftKeys.has(
+            giftDuplicateKey
+        )
+    ) {
+
+        return;
+    }
+
+    displayedGiftKeys.add(
+        giftDuplicateKey
+    );
+
+    /*
+     * Setが無限に大きくならないように
+     * 古いキーを整理する。
+     */
+    if (
+        displayedGiftKeys.size >
+        5000
+    ) {
+
+        const keys =
+            Array.from(
+                displayedGiftKeys
+            );
+
+        const removeCount =
+            keys.length - 4000;
+
+        for (
+            let i = 0;
+            i < removeCount;
+            i++
+        ) {
+
+            displayedGiftKeys.delete(
+                keys[i]
+            );
+        }
     }
 
     const userId =
@@ -1612,14 +1433,12 @@ function addGiftItem(data) {
         '';
 
     const streakId =
-        getGiftDuplicateKey(
-            data
-        ) ||
-        (
-            String(userId) +
-            '_' +
-            String(giftId)
-        );
+        String(userId) +
+        '_' +
+        String(giftId);
+
+    const pending =
+        isPendingStreak(data);
 
     const giftName =
         data.giftName ||
@@ -1650,9 +1469,7 @@ function addGiftItem(data) {
         'ギフトを送信';
 
     const safeGiftName =
-        sanitize(
-            giftName
-        );
+        sanitize(giftName);
 
     const safeDescribe =
         sanitize(
@@ -1664,7 +1481,8 @@ function addGiftItem(data) {
         );
 
     const repeatText =
-        '個数: x' +
+        '個数: ' +
+        'x' +
         repeatCount.toLocaleString();
 
     const cost =
@@ -1677,9 +1495,7 @@ function addGiftItem(data) {
     let giftImageHtml =
         '';
 
-    if (
-        giftPictureUrl
-    ) {
+    if (giftPictureUrl) {
 
         giftImageHtml =
             '<img class="gifticon" ' +
@@ -1687,15 +1503,15 @@ function addGiftItem(data) {
             sanitize(
                 giftPictureUrl
             ) +
-            '" alt="" loading="lazy">';
+            '" ' +
+            'alt="" ' +
+            'loading="lazy">';
     }
 
     let profileImageHtml =
         '';
 
-    if (
-        profilePictureUrl
-    ) {
+    if (profilePictureUrl) {
 
         profileImageHtml =
             '<img class="miniprofilepicture" ' +
@@ -1703,22 +1519,18 @@ function addGiftItem(data) {
             sanitize(
                 profilePictureUrl
             ) +
-            '" alt="" loading="lazy">';
+            '" ' +
+            'alt="" ' +
+            'loading="lazy">';
     }
-
-    const giftNickname =
-        data.nickname ||
-        (
-            data.user &&
-            data.user.nickname
-        ) ||
-        'ユーザー';
 
     const html =
         '<div ' +
         'data-streakid="' +
         sanitize(
-            streakId
+            pending
+                ? streakId
+                : ''
         ) +
         '">' +
 
@@ -1738,8 +1550,8 @@ function addGiftItem(data) {
                 '">' +
 
                     '<b>' +
-                    sanitize(
-                        giftNickname
+                    generateUsernameLink(
+                        data
                     ) +
                     ':</b> ' +
 
@@ -1749,7 +1561,8 @@ function addGiftItem(data) {
 
                     '<br>' +
 
-                    '<span class="giftDetail">' +
+                    '<span ' +
+                    'class="giftDetail">' +
                     timeText +
                     '</span>' +
 
@@ -1765,7 +1578,8 @@ function addGiftItem(data) {
 
                                 '<td>' +
 
-                                    '<span class="giftDetail">' +
+                                    '<span ' +
+                                    'class="giftDetail">' +
                                     '名前: <b>' +
                                     safeGiftName +
                                     '</b>' +
@@ -1773,7 +1587,8 @@ function addGiftItem(data) {
 
                                     '<br>' +
 
-                                    '<span class="giftDetail">' +
+                                    '<span ' +
+                                    'class="giftDetail">' +
                                     'ID: <b>' +
                                     sanitize(
                                         giftId
@@ -1783,7 +1598,8 @@ function addGiftItem(data) {
 
                                     '<br>' +
 
-                                    '<span class="giftDetail">' +
+                                    '<span ' +
+                                    'class="giftDetail">' +
                                     sanitize(
                                         repeatText
                                     ) +
@@ -1791,7 +1607,8 @@ function addGiftItem(data) {
 
                                     '<br>' +
 
-                                    '<span class="giftDetail">' +
+                                    '<span ' +
+                                    'class="giftDetail">' +
                                     'コスト: <b>' +
                                     cost.toLocaleString() +
                                     ' Diamonds</b>' +
@@ -1827,195 +1644,32 @@ function addGiftItem(data) {
                 }
             );
 
-    /*
-     * 既存ギフトなら更新。
-     *
-     * ここでは音を鳴らさない。
-     */
     if (
+        pending &&
         existing.length
     ) {
 
-        existing.first().replaceWith(
+        existing.first()
+            .replaceWith(
+                html
+            );
+
+    } else {
+
+        container.append(
             html
         );
-
-        scrollGiftToBottom();
-
-        return {
-            added: false,
-            element:
-                container.find(
-                    '[data-streakid]'
-                ).last()
-        };
     }
 
-    /*
-     * 本当に新しいギフトだけ追加。
-     */
-    container.append(
-        html
-    );
+    container.stop();
 
-    const newElement =
-        container
-            .find(
-                '[data-streakid]'
-            )
-            .last();
-
-    scrollGiftToElement(
-        newElement
-    );
-
-    return {
-        added: true,
-        element: newElement
-    };
-}
-
-
-/* =========================================================
-   GIFT SCROLL
-========================================================= */
-
-function scrollGiftToElement(element) {
-
-    const container =
-        location.href.includes(
-            'obs.html'
-        )
-            ? $('.eventcontainer')
-            : $('.giftcontainer');
-
-    if (
-        !container.length
-    ) {
-
-        return;
-    }
-
-    const target =
-        container[0];
-
-    target.scrollTop =
-        target.scrollHeight;
-
-    requestAnimationFrame(
-        function () {
-
-            target.scrollTop =
-                target.scrollHeight;
-
-            requestAnimationFrame(
-                function () {
-
-                    target.scrollTop =
-                        target.scrollHeight;
-                }
-            );
-        }
-    );
-
-    setTimeout(
-        function () {
-
-            target.scrollTop =
-                target.scrollHeight;
-
+    container.animate(
+        {
+            scrollTop:
+                container[0]
+                    .scrollHeight
         },
-        50
-    );
-
-    setTimeout(
-        function () {
-
-            target.scrollTop =
-                target.scrollHeight;
-
-        },
-        150
-    );
-
-    setTimeout(
-        function () {
-
-            target.scrollTop =
-                target.scrollHeight;
-
-        },
-        300
-    );
-}
-
-
-function scrollGiftToBottom() {
-
-    const container =
-        location.href.includes(
-            'obs.html'
-        )
-            ? $('.eventcontainer')
-            : $('.giftcontainer');
-
-    if (
-        !container.length
-    ) {
-
-        return;
-    }
-
-    const target =
-        container[0];
-
-    target.scrollTop =
-        target.scrollHeight;
-
-    requestAnimationFrame(
-        function () {
-
-            target.scrollTop =
-                target.scrollHeight;
-
-            requestAnimationFrame(
-                function () {
-
-                    target.scrollTop =
-                        target.scrollHeight;
-                }
-            );
-        }
-    );
-
-    setTimeout(
-        function () {
-
-            target.scrollTop =
-                target.scrollHeight;
-
-        },
-        50
-    );
-
-    setTimeout(
-        function () {
-
-            target.scrollTop =
-                target.scrollHeight;
-
-        },
-        150
-    );
-
-    setTimeout(
-        function () {
-
-            target.scrollTop =
-                target.scrollHeight;
-
-        },
-        300
+        400
     );
 }
 
@@ -2045,10 +1699,7 @@ function addChatItem(
 
         container
             .find('div')
-            .slice(
-                0,
-                200
-            )
+            .slice(0, 200)
             .remove();
     }
 
@@ -2063,9 +1714,7 @@ function addChatItem(
     let profileImageHtml =
         '';
 
-    if (
-        profilePictureUrl
-    ) {
+    if (profilePictureUrl) {
 
         profileImageHtml =
             '<img class="miniprofilepicture" ' +
@@ -2073,16 +1722,10 @@ function addChatItem(
             sanitize(
                 profilePictureUrl
             ) +
-            '" alt="" loading="lazy">';
+            '" ' +
+            'alt="" ' +
+            'loading="lazy">';
     }
-
-    const chatNickname =
-        data.nickname ||
-        (
-            data.user &&
-            data.user.nickname
-        ) ||
-        'ユーザー';
 
     container.append(
 
@@ -2099,19 +1742,15 @@ function addChatItem(
             '<span style="min-width:0;">' +
 
                 '<b>' +
-                sanitize(
-                    chatNickname
+                generateUsernameLink(
+                    data
                 ) +
                 ':</b> ' +
 
                 '<span style="color:' +
-                sanitize(
-                    color
-                ) +
+                sanitize(color) +
                 '">' +
-                sanitize(
-                    text
-                ) +
+                sanitize(text) +
                 '</span>' +
 
             '</span>' +
@@ -2119,6 +1758,12 @@ function addChatItem(
         '</div>'
     );
 
+    /*
+     * 通常のチャットだけ
+     * 自動スクロール設定に従う。
+     *
+     * OBSのeventcontainerは従来通り。
+     */
     if (
         container.hasClass(
             'chatcontainer'
@@ -2134,14 +1779,22 @@ function addChatItem(
 
     } else {
 
-        container[0].scrollTop =
-            container[0].scrollHeight;
+        container.stop();
+
+        container.animate(
+            {
+                scrollTop:
+                    container[0]
+                        .scrollHeight
+            },
+            400
+        );
     }
 }
 
 
 /* =========================================================
-   VIEWER LIST
+   VIEWERS
 ========================================================= */
 
 function updateViewersFromRoomUser(msg) {
@@ -2157,7 +1810,7 @@ function updateViewersFromRoomUser(msg) {
     }
 
     msg.ranks.forEach(
-        function (rankItem) {
+        rankItem => {
 
             if (
                 !rankItem ||
@@ -2175,18 +1828,14 @@ function updateViewersFromRoomUser(msg) {
                 user.idStr ||
                 user.displayId;
 
-            if (
-                !id
-            ) {
-
+            if (!id) {
                 return;
             }
 
             viewerMap.set(
                 String(id),
                 {
-                    id:
-                        String(id),
+                    id: String(id),
 
                     nickname:
                         user.nickname ||
@@ -2200,10 +1849,14 @@ function updateViewersFromRoomUser(msg) {
                     avatar:
                         user.avatarThumb &&
                         Array.isArray(
-                            user.avatarThumb.urlList
+                            user.avatarThumb
+                                .urlList
                         ) &&
-                        user.avatarThumb.urlList.length
-                            ? user.avatarThumb.urlList[0]
+                        user.avatarThumb
+                            .urlList
+                            .length
+                            ? user.avatarThumb
+                                .urlList[0]
                             : ''
                 }
             );
@@ -2219,10 +1872,7 @@ function updateViewerList() {
     const list =
         $('#viewerList');
 
-    if (
-        !list.length
-    ) {
-
+    if (!list.length) {
         return;
     }
 
@@ -2234,7 +1884,7 @@ function updateViewerList() {
     list.empty();
 
     viewers.forEach(
-        function (viewer) {
+        viewer => {
 
             const item =
                 $('<div>')
@@ -2242,9 +1892,7 @@ function updateViewerList() {
                         'viewerItem'
                     );
 
-            if (
-                viewer.avatar
-            ) {
+            if (viewer.avatar) {
 
                 $('<img>')
                     .attr(
@@ -2308,10 +1956,6 @@ function updateViewerList() {
 }
 
 
-/* =========================================================
-   VIEWER MENU
-========================================================= */
-
 function openViewerMenu() {
 
     $('#viewerSideMenu')
@@ -2346,7 +1990,7 @@ function closeViewerMenu() {
 
 connection.on(
     'roomUser',
-    function (msg) {
+    (msg) => {
 
         if (
             msg &&
@@ -2375,11 +2019,11 @@ let joinMsgDelay = 0;
 
 connection.on(
     'member',
-    function (msg) {
+    (msg) => {
 
         if (
             window.settings.showJoins ===
-            '0'
+            "0"
         ) {
 
             return;
@@ -2413,7 +2057,7 @@ connection.on(
             actualDelay;
 
         setTimeout(
-            function () {
+            () => {
 
                 joinMsgDelay -=
                     actualDelay;
@@ -2433,16 +2077,16 @@ connection.on(
 
 
 /* =========================================================
-   CHAT
+   CHAT EVENT
 ========================================================= */
 
 connection.on(
     'chat',
-    function (msg) {
+    (msg) => {
 
         if (
             window.settings.showChats ===
-            '0'
+            "0"
         ) {
 
             return;
@@ -2456,8 +2100,9 @@ connection.on(
         }
 
         /*
-         * 本物のコメントだけが
-         * いいね表示の抑制を解除する。
+         * いいね抑制は
+         * 実際の通常コメントが来た
+         * ときだけ解除する。
          */
         likeMessageDisplayed =
             false;
@@ -2477,12 +2122,12 @@ connection.on(
 
 
 /* =========================================================
-   GIFT
+   GIFT EVENT
 ========================================================= */
 
 connection.on(
     'gift',
-    function (data) {
+    (data) => {
 
         if (
             !isPendingStreak(data) &&
@@ -2507,96 +2152,24 @@ connection.on(
 
         if (
             window.settings.showGifts ===
-            '0'
+            "0"
         ) {
 
             return;
         }
 
-        const duplicate =
-            isDuplicateGift(
-                data
-            );
+        addGiftItem(
+            data
+        );
 
         /*
-         * 同じギフトイベントの
-         * 更新処理。
+         * ギフト受信時に音を再生。
          *
-         * 表示だけ更新。
-         * 音は鳴らさない。
+         * 100分の1 → durandal
+         * 50分の1 → sakibare
+         * それ以外 → gift
          */
-        if (
-            duplicate
-        ) {
-
-            addGiftItem(
-                data
-            );
-
-            if (
-                data &&
-                data.repeatEnd
-            ) {
-
-                const streakKey =
-                    getGiftDuplicateKey(
-                        data
-                    );
-
-                if (
-                    streakKey
-                ) {
-
-                    activeGiftStreaks.delete(
-                        streakKey
-                    );
-                }
-            }
-
-            return;
-        }
-
-        const streakKey =
-            getGiftDuplicateKey(
-                data
-            );
-
-        /*
-         * 先にギフト欄へ追加する。
-         */
-        const result =
-            addGiftItem(
-                data
-            );
-
-        /*
-         * 「新規カード追加」のときだけ
-         * 音声を鳴らす。
-         *
-         * 既存カードの更新では鳴らさない。
-         */
-        if (
-            result &&
-            result.added
-        ) {
-
-            requestAnimationFrame(
-                function () {
-
-                    playGiftSound();
-                }
-            );
-        }
-
-        if (
-            data &&
-            data.repeatEnd
-        ) {
-
-            activeGiftStreaks.delete(
-                streakKey
-            );
-        }
+        playGiftSound();
     }
 );
 
@@ -2607,11 +2180,11 @@ connection.on(
 
 connection.on(
     'social',
-    function (data) {
+    (data) => {
 
         if (
             window.settings.showFollows ===
-            '0'
+            "0"
         ) {
 
             return;
@@ -2656,11 +2229,11 @@ connection.on(
 
 connection.on(
     'like',
-    function (data) {
+    (data) => {
 
         if (
             window.settings.showLikes ===
-            '0'
+            "0"
         ) {
 
             return;
@@ -2692,10 +2265,12 @@ connection.on(
         updateRoomStats();
 
         /*
-         * 最初のいいねだけ表示。
+         * 最初のいいねを表示。
          *
-         * member / social / joinでは
-         * likeMessageDisplayedを解除しない。
+         * member / social / 参加しました
+         * では解除しない。
+         *
+         * 通常のchatが来たら解除される。
          */
         if (
             likeMessageDisplayed
@@ -2725,7 +2300,7 @@ connection.on(
 
 connection.on(
     'streamEnd',
-    function () {
+    () => {
 
         $('#stateText').text(
             '配信は終了しました。'
@@ -2736,7 +2311,7 @@ connection.on(
         ) {
 
             setTimeout(
-                function () {
+                () => {
 
                     connect();
 

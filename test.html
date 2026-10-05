@@ -2,163 +2,472 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     >
-    <title>音声テスト</title>
 
-    <style>
-        body {
-            background: #222;
-            color: white;
-            font-family: sans-serif;
-            text-align: center;
-            padding: 30px 15px;
-        }
+    <title>TikTok LIVE ギフトテスト</title>
 
-        button {
-            display: block;
-            width: 100%;
-            max-width: 300px;
-            margin: 15px auto;
-            padding: 18px;
-            font-size: 18px;
-            border: none;
-            border-radius: 10px;
-        }
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="style.css">
 
-        #status {
-            margin-top: 25px;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-    </style>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+    ></script>
+
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+    ></script>
+
+    <script src="connection.js"></script>
+    <script src="app.js"></script>
 </head>
 
 <body>
 
-    <h2>🔊 音声テスト</h2>
+    <header class="head">
 
-    <button id="tegamiButton">
-        tegami.mp3
-    </button>
+        <button
+            id="viewerMenuButton"
+            class="viewerMenuButton"
+            type="button"
+        >
+            ☰
+        </button>
 
-    <button id="sakibareButton">
-        sakibare.mp3
-    </button>
+    </header>
 
-    <button id="bothButton">
-        両方テスト
-    </button>
 
-    <div id="status">
-        ボタンを押してください
+    <div
+        id="viewerSideMenu"
+        class="viewerSideMenu"
+    >
+
+        <div class="viewerMenuHeader">
+
+            <span>視聴者</span>
+
+            <button
+                id="viewerMenuClose"
+                type="button"
+            >
+                ×
+            </button>
+
+        </div>
+
+        <div
+            id="viewerCountText"
+            class="viewerCountText"
+        >
+            視聴者数: 0
+        </div>
+
+        <div
+            id="viewerList"
+            class="viewerList"
+        ></div>
+
     </div>
+
+
+    <div
+        id="viewerMenuOverlay"
+        class="viewerMenuOverlay"
+    ></div>
+
+
+    <main>
+
+        <div class="inputFields">
+
+            <div class="inputRow">
+
+                <input
+                    type="text"
+                    id="uniqueIdInput"
+                    placeholder="テストモード"
+                    autocomplete="off"
+                    value="test_user"
+                >
+
+                <button
+                    id="copyUrlButton"
+                    type="button"
+                >
+                    URLコピー
+                </button>
+
+            </div>
+
+            <button
+                id="connectButton"
+                type="button"
+            >
+                接続
+            </button>
+
+        </div>
+
+
+        <div class="statusBar">
+
+            <pre id="stateText">ギフトテストモード</pre>
+
+            <div id="roomStats">
+                視聴者数: 0　いいね: 0　ダイヤ: 0
+            </div>
+
+        </div>
+
+
+        <!-- =========================================
+             テスト操作
+        ========================================== -->
+
+        <div
+            style="
+                padding: 6px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            "
+        >
+
+            <button
+                id="testGiftButton"
+                type="button"
+            >
+                🎁 テストギフト
+            </button>
+
+            <button
+                id="testGift10Button"
+                type="button"
+            >
+                🎁×10
+            </button>
+
+            <button
+                id="testDuplicateGiftButton"
+                type="button"
+            >
+                🔁 重複テスト
+            </button>
+
+            <button
+                id="testSoundButton"
+                type="button"
+            >
+                🔊 音声テスト
+            </button>
+
+        </div>
+
+
+        <div class="mainContent">
+
+            <div class="chatcontainer">
+
+                <h3 class="containerheader">
+
+                    <span>
+                        チャット
+                    </span>
+
+                    <button
+                        id="chatAutoScrollButton"
+                        class="containerActionButton"
+                        type="button"
+                        title="チャット自動スクロール"
+                    >
+                        ↓
+                    </button>
+
+                </h3>
+
+            </div>
+
+
+            <div class="giftcontainer">
+
+                <h3 class="containerheader">
+
+                    <span>
+                        ギフト
+                    </span>
+
+                    <span class="giftHeaderButtons">
+
+                        <button
+                            id="giftAudioButton"
+                            class="containerActionButton"
+                            type="button"
+                            title="ギフト音をオン"
+                        >
+                            🔇
+                        </button>
+
+                        <button
+                            id="giftExpandButton"
+                            class="containerActionButton"
+                            type="button"
+                            title="ギフトを拡大"
+                        >
+                            ⛶
+                        </button>
+
+                    </span>
+
+                </h3>
+
+            </div>
+
+        </div>
+
+    </main>
+
 
     <script>
 
-        const tegami =
-            new Audio('./tegami.mp3');
+        /*
+         * ============================================
+         * テストギフト
+         * ============================================
+         */
 
-        const sakibare =
-            new Audio('./sakibare.mp3');
-
-
-        function playAudio(
-            audio,
-            name
+        function createTestGift(
+            giftId,
+            createTime
         ) {
 
-            audio.pause();
+            return {
 
-            audio.currentTime = 0;
+                userId: '123456789',
 
-            audio.volume = 1.0;
+                uniqueId: 'test_user',
 
-            const promise =
-                audio.play();
+                giftId: giftId,
 
-            if (promise) {
+                giftName: 'テストギフト',
 
-                promise
-                    .then(function () {
+                giftType: 0,
 
-                        document.getElementById(
-                            'status'
-                        ).textContent =
-                            name +
-                            ' 再生開始';
+                repeatCount: 1,
 
-                    })
-                    .catch(function (error) {
+                repeatEnd: true,
 
-                        document.getElementById(
-                            'status'
-                        ).textContent =
-                            name +
-                            ' 再生失敗\n\n' +
-                            error;
+                diamondCount: 10,
 
-                        console.error(
-                            error
-                        );
-                    });
+                giftPictureUrl: '',
 
-            }
+                profilePictureUrl: '',
+
+                describe: 'テストギフトを送信',
+
+                common: {
+
+                    createTime:
+                        createTime
+
+                }
+
+            };
         }
 
 
-        document.getElementById(
-            'tegamiButton'
-        ).addEventListener(
-            'click',
-            function () {
+        /*
+         * 実際のgiftイベントと
+         * 同じ処理を呼び出す。
+         */
+        function sendTestGift() {
 
-                playAudio(
-                    tegami,
-                    'tegami.mp3'
+            const data =
+                createTestGift(
+                    'TEST001',
+                    Date.now()
                 );
-            }
-        );
+
+            /*
+             * app.jsの
+             * addGiftItem()
+             * を直接呼び出す。
+             */
+            addGiftItem(
+                data
+            );
+
+            /*
+             * 音声も実際のgiftと
+             * 同じ処理。
+             */
+            playGiftSound();
+        }
 
 
-        document.getElementById(
-            'sakibareButton'
-        ).addEventListener(
-            'click',
-            function () {
+        /*
+         * 10個連続テスト
+         */
+        function sendTestGift10() {
 
-                playAudio(
-                    sakibare,
-                    'sakibare.mp3'
-                );
-            }
-        );
-
-
-        document.getElementById(
-            'bothButton'
-        ).addEventListener(
-            'click',
-            function () {
-
-                playAudio(
-                    tegami,
-                    'tegami.mp3'
-                );
+            for (
+                let i = 0;
+                i < 10;
+                i++
+            ) {
 
                 setTimeout(
                     function () {
 
-                        playAudio(
-                            sakibare,
-                            'sakibare.mp3'
+                        const data =
+                            createTestGift(
+                                'TEST_' +
+                                Date.now() +
+                                '_' +
+                                i,
+                                Date.now() +
+                                i
+                            );
+
+                        addGiftItem(
+                            data
                         );
 
+                        playGiftSound();
+
                     },
-                    500
+                    i * 150
                 );
+            }
+        }
+
+
+        /*
+         * 同じgiftを
+         * 同じcreateTimeで2回送る。
+         *
+         * 重複防止が正常なら
+         * 表示は1件だけ。
+         */
+        function sendDuplicateGiftTest() {
+
+            const createTime =
+                Date.now();
+
+            const data1 =
+                createTestGift(
+                    'DUPLICATE001',
+                    createTime
+                );
+
+            const data2 =
+                createTestGift(
+                    'DUPLICATE001',
+                    createTime
+                );
+
+            addGiftItem(
+                data1
+            );
+
+            addGiftItem(
+                data2
+            );
+
+            /*
+             * 重複なので音も1回だけにする。
+             */
+            playGiftSound();
+        }
+
+
+        /*
+         * 音声だけテスト
+         */
+        function sendTestSound() {
+
+            /*
+             * ミュート中なら
+             * ボタンと同じように解除する。
+             */
+            if (
+                !giftAudioEnabled
+            ) {
+
+                giftAudioEnabled =
+                    true;
+
+                unlockGiftAudio();
+
+                updateGiftAudioButton();
+            }
+
+            setTimeout(
+                function () {
+
+                    playGiftSound();
+
+                },
+                100
+            );
+        }
+
+
+        /*
+         * テストギフト
+         */
+        $('#testGiftButton').on(
+            'click',
+            function () {
+
+                sendTestGift();
+
+            }
+        );
+
+
+        /*
+         * 10連続
+         */
+        $('#testGift10Button').on(
+            'click',
+            function () {
+
+                sendTestGift10();
+
+            }
+        );
+
+
+        /*
+         * 重複テスト
+         */
+        $('#testDuplicateGiftButton').on(
+            'click',
+            function () {
+
+                sendDuplicateGiftTest();
+
+            }
+        );
+
+
+        /*
+         * 音声テスト
+         */
+        $('#testSoundButton').on(
+            'click',
+            function () {
+
+                sendTestSound();
+
             }
         );
 
