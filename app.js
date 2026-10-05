@@ -97,18 +97,16 @@ $(document).ready(() => {
 
     loadUrlSettings();
 
-    $('#connectButton').click(connect);
+    $('#connectButton').click(function () {
+        unlockGiftAudio();
+        connect();
+    });
 
     $('#uniqueIdInput').on('keyup', function (e) {
 
         if (e.key === 'Enter') {
-            unlockGiftAudio();
             connect();
         }
-    });
-
-    $('#uniqueIdInput').on('focus', function () {
-        unlockGiftAudio();
     });
 
     $('#copyUrlButton').click(copyQueryUrl);
@@ -133,8 +131,6 @@ $(document).ready(() => {
 ========================================================= */
 
 function connect() {
-
-    unlockGiftAudio();
 
     let uniqueId =
         window.settings.username ||

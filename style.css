@@ -191,13 +191,12 @@ main {
     overflow-x: hidden;
     min-height: 0;
     max-height: 100%;
+    height: 100%;
     -webkit-overflow-scrolling: touch;
 }
 
 .containerheader {
-    position: sticky;
-    top: 0;
-    z-index: 2;
+    position: static;
     flex-shrink: 0;
     margin: 0;
     padding: 7px 9px;
@@ -231,6 +230,7 @@ main {
     border: 1px solid #39383e;
     overflow: hidden;
     line-height: 1.2;
+    flex-shrink: 0;
 }
 
 .miniprofilepicture {
