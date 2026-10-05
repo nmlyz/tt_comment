@@ -2150,9 +2150,8 @@ function connect() {
             state => {
 
                 $('#stateText').text(
-                    'ルームID ' +
-                    state.roomId +
-                    ' に接続'
+                    '接続:  ' +
+                    state.roomId
                 );
 
 
