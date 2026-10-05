@@ -533,10 +533,6 @@ async function resumeGiftAudioContext() {
    GIFT AUDIO KEEPALIVE
 ========================================================= */
 
-/*
- * ほぼ無音のOscillatorを鳴らし続けて
- * AudioContextがsuspendされにくくする。
- */
 function startGiftKeepAlive() {
 
     if (
@@ -778,12 +774,6 @@ async function unlockGiftAudio() {
     }
 
 
-    /*
-     * Web Audio側の再生許可を取得。
-     *
-     * 無音のOscillatorなので
-     * アンロック時にギフト音は鳴らない。
-     */
     const context =
         createGiftAudioContext();
 
@@ -845,13 +835,6 @@ async function unlockGiftAudio() {
     }
 
 
-    /*
-     * HTMLAudio側も再生許可を取得。
-     *
-     * 完全ミュートで行う。
-     * （BufferSource再生に失敗したときの
-     *   フォールバック用）
-     */
     const urls = [
         NORMAL_GIFT_AUDIO_URL,
         TEGAMI_AUDIO_URL,
@@ -977,10 +960,6 @@ async function unlockGiftAudio() {
     }
 
 
-    /*
-     * AudioContextが使える場合は
-     * こちらも成功扱い。
-     */
     if (
         context &&
         context.state === 'running'
@@ -1107,11 +1086,6 @@ function setupFirstInteractionAudioUnlock() {
    PERSISTENT AUDIO RESUME
 ========================================================= */
 
-/*
- * 1回きりではなく、操作のたびに
- * AudioContextがrunningか確認して復帰させる。
- * （ミュート切替後しばらくして鳴らなくなる対策）
- */
 function setupPersistentAudioResume() {
 
     if (
@@ -2580,6 +2554,66 @@ function generateDisplayName(data) {
 
 
 /* =========================================================
+   USERNAME LINK
+========================================================= */
+
+/*
+ * チャット・ギフトのユーザー名を
+ * TikTokプロフィールへの直接リンクにする。
+ */
+function generateUsernameLink(data) {
+
+    if (!data) {
+
+        return 'ユーザー';
+    }
+
+
+    const uniqueId =
+        data.uniqueId ||
+        (
+            data.user &&
+            (
+                data.user.uniqueId ||
+                data.user.displayId
+            )
+        ) ||
+        data.displayId ||
+        '';
+
+
+    if (!uniqueId) {
+
+        return generateDisplayName(
+            data
+        );
+    }
+
+
+    const safeUniqueId =
+        sanitize(
+            uniqueId
+        );
+
+
+    return (
+        '<a class="usernamelink" ' +
+        'href="https://www.tiktok.com/@' +
+        encodeURIComponent(
+            uniqueId
+        ) +
+        '" ' +
+        'target="_blank" ' +
+        'rel="noopener noreferrer">' +
+        generateDisplayName(
+            data
+        ) +
+        '</a>'
+    );
+}
+
+
+/* =========================================================
    COMMENT DUPLICATE
 ========================================================= */
 
@@ -2872,11 +2906,6 @@ function selectGiftAudioUrl() {
    PLAY GIFT AUDIO (Web Audio BufferSource)
 ========================================================= */
 
-/*
- * メイン再生経路。
- * AudioContextがrunningなら
- * ユーザー操作なしで何度でも鳴らせる。
- */
 function playGiftBuffer(context, buffer) {
 
     const source =
@@ -2980,9 +3009,6 @@ function playGiftWithHtmlAudio(soundUrl) {
             'auto';
 
 
-        /*
-         * HTMLAudio側は最大。
-         */
         audio.volume =
             1.0;
 
@@ -2992,9 +3018,6 @@ function playGiftWithHtmlAudio(soundUrl) {
         );
 
 
-        /*
-         * Web Audioで増幅。
-         */
         const context =
             createGiftAudioContext();
 
@@ -3130,12 +3153,6 @@ function playGiftWithHtmlAudio(soundUrl) {
             cleanup;
 
 
-        /*
-         * ここで即時再生。
-         *
-         * キューなし。
-         * 最大数制限なし。
-         */
         const promise =
             audio.play();
 
@@ -3206,10 +3223,6 @@ async function playQueuedGiftSound(soundUrl) {
 
     try {
 
-        /*
-         * まずAudioContextをrunningにする。
-         * 止まっていたらここで復帰を試みる。
-         */
         const running =
             await resumeGiftAudioContext();
 
@@ -3259,10 +3272,6 @@ async function playQueuedGiftSound(soundUrl) {
     }
 
 
-    /*
-     * バッファ再生できない場合は
-     * 従来のHTMLAudio再生にフォールバック。
-     */
     playGiftWithHtmlAudio(
         soundUrl
     );
@@ -3283,25 +3292,10 @@ function playGiftSound() {
     }
 
 
-    /*
-     * giftAudioUnlockedでは弾かない。
-     *
-     * 以前はここでブロックされて
-     * 一度でもunlock状態が崩れると
-     * 再度オンオフするまで鳴らなかった。
-     * 今は常に再生を試み、
-     * context復帰もplayQueuedGiftSound側で行う。
-     */
     const soundUrl =
         selectGiftAudioUrl();
 
 
-    /*
-     * 待機キューには入れない。
-     *
-     * ギフトが追加された瞬間に
-     * そのまま再生する。
-     */
     playQueuedGiftSound(
         soundUrl
     );
@@ -3563,7 +3557,7 @@ function addGiftItem(data) {
                 '">' +
 
                     '<b>' +
-                    generateDisplayName(
+                    generateUsernameLink(
                         data
                     ) +
                     ':</b> ' +
@@ -3768,7 +3762,7 @@ function addChatItem(
             '<span style="min-width:0;">' +
 
                 '<b>' +
-                generateDisplayName(
+                generateUsernameLink(
                     data
                 ) +
                 ':</b> ' +
@@ -3980,6 +3974,36 @@ function updateViewerList() {
 
             item.append(
                 text
+            );
+
+
+            /*
+             * ハンバーガーメニュー内の
+             * ユーザーを押したらTikTokプロフィールへ。
+             */
+            item.css(
+                'cursor',
+                'pointer'
+            );
+
+
+            item.on(
+                'click',
+                function () {
+
+                    if (
+                        viewer.displayId
+                    ) {
+
+                        window.open(
+                            'https://www.tiktok.com/@' +
+                            encodeURIComponent(
+                                viewer.displayId
+                            ),
+                            '_blank'
+                        );
+                    }
+                }
             );
 
 
@@ -4214,21 +4238,12 @@ connection.on(
         }
 
 
-        /*
-         * 先にUIへ追加。
-         */
         const added =
             addGiftItem(
                 data
             );
 
 
-        /*
-         * UI追加直後に即再生。
-         *
-         * duplicateならaddGiftItemがfalseなので
-         * 音も鳴らない。
-         */
         if (
             added
         ) {
